@@ -2,6 +2,28 @@
 
 * wayfinder-front → Angular SPA (UI, Routing, Top10 etc.)
 * wayfinder-api → REST-API mit Swagger, DB-Speicherung
+## Quickstart (lokal)
+
+### Voraussetzungen
+- Node.js ≥ 20, npm ≥ 10
+- Angular CLI (`npm i -g @angular/cli`)
+- (optional) Docker für DB
+
+## 🔧 Quickstart (lokal)
+
+### Voraussetzungen
+- Node.js ≥ 20, npm ≥ 10
+- Angular CLI (`npm i -g @angular/cli`)
+- (optional) Docker für DB
+
+### Frontend starten
+```bash
+ cd wayfinder-front
+ npm ci
+ ng serve # läuft auf http://localhost:4200
+```
+
+
 
 ## Projektstruktur
 Der für den Aufbau des Repositorys ist hier dargestellt. Dies wird regelmässig während der Projektumsetzung, wenn nötig angepasst.
@@ -26,6 +48,8 @@ wayfinder-api/        <-- REST API (z. B. Node/Nest/Express, DB)
 │   ├── README.md    (Swagger, Endpoints, Tests)
 │   └── src/
 ```
+
+
 
 ### Vorteile dieser Struktur sind: 
 - Klar getrennte Teilprojekte
