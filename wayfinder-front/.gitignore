@@ -1,0 +1,28 @@
+# Dependencies
+/node_modules
+
+# Build
+/dist
+/build
+/.angular/cache
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Tests
+/coverage
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+
+# Environment / Secrets
+.env
+*.local.ts
