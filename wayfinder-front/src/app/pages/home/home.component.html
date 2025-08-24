@@ -1,0 +1,8 @@
+<div class="container">
+  <app-search-form (routeRequested)="currentRoute = $event"></app-search-form>
+
+  <div class="content">
+    <app-map [route]="currentRoute"></app-map>
+    <app-top-routes></app-top-routes>
+  </div>
+</div>
