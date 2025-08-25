@@ -26,3 +26,10 @@ Thumbs.db
 # Environment / Secrets
 .env
 *.local.ts
+
+# Playwright
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

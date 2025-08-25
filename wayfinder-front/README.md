@@ -44,6 +44,17 @@ To execute unit tests with the [Karma](https://karma-runner.github.io) test runn
 ng test
 ```
 
+### Running e2e Playwright Tests
+```bash
+npx playwright test
+```
+
+Open report:
+
+```bash
+npx playwright show-report
+```
+
 ## Running end-to-end tests
 
 For end-to-end (e2e) testing, run:
