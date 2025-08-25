@@ -31,7 +31,6 @@ import {ConfigService} from './services/config.service';
     TopRoutesComponent,
     AppComponent,
     BrowserModule,
-    AppRoutingModule,
     FormsModule,
     ReactiveFormsModule,
     MatToolbarModule,

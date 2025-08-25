@@ -1,0 +1,18 @@
+<h2>Gespeicherte Routen</h2>
+
+<mat-list data-testid="saved-routes-list">
+  @for (route of savedRoutes; track route.id) {
+    <mat-list-item>
+      <span>{{ displayRoute(route) }}</span>
+      <button
+        mat-icon-button
+        aria-label="Route löschen"
+        (click)="remove(route.id)"
+        data-testid="delete-saved-route">
+        <mat-icon>delete</mat-icon>
+      </button>
+    </mat-list-item>
+  } @empty {
+    <mat-list-item>Keine gespeicherten Routen.</mat-list-item>
+  }
+</mat-list>

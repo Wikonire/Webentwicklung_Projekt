@@ -1,1 +1,5 @@
-<p>map works!</p>
+<div data-testid="map">
+  <div *ngIf="route" data-testid="route-polyline">
+    {{ route.from }} → {{ route.to }}
+  </div>
+</div>

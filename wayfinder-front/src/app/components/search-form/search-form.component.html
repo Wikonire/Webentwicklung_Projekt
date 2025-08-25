@@ -1,1 +1,24 @@
-<p>search-form works!</p>
+<h2>Route finden</h2>
+<form class="formGrid">
+
+  <mat-form-field>
+    <mat-label>Startort</mat-label>
+    <input matInput aria-label="Startort" id="startControl" type="text" [formControl]="startControl" />
+  </mat-form-field>
+
+  <mat-form-field>
+    <mat-label>Zielort</mat-label>
+    <input matInput aria-label="Zielort" id="endControl" type="text" [formControl]="endControl" />
+  </mat-form-field>
+
+  <button mat-raised-button (click)="onClear()">Eingaben löschen</button>
+  <button
+    mat-raised-button
+    color="primary"
+    (click)="onSubmit()"
+    data-testid="route-button">
+    Route berechnen
+  </button>
+
+</form>
+

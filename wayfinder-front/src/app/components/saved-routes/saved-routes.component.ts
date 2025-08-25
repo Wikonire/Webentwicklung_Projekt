@@ -1,17 +1,19 @@
 import { Component, OnInit } from '@angular/core';
 import { RoutesService, RouteRecord } from '../../services/routes.service';
-import {MatListModule} from '@angular/material/list';
-import {MatCardModule} from '@angular/material/card';
-import {MatIconModule} from '@angular/material/icon';
+import { MatListModule } from '@angular/material/list';
+import { MatIconModule } from '@angular/material/icon';
+import { CommonModule } from '@angular/common';
+import {MatButtonModule} from '@angular/material/button';
 
 @Component({
   selector: 'app-saved-routes',
+  standalone: true,
   templateUrl: './saved-routes.component.html',
   styleUrls: ['./saved-routes.component.scss'],
-  imports:[MatListModule, MatCardModule, MatIconModule]
+  imports: [CommonModule, MatListModule, MatIconModule, MatButtonModule],
 })
 export class SavedRoutesComponent implements OnInit {
-  routes: RouteRecord[] = [];
+  savedRoutes: RouteRecord[] = [];
   userId = this.getUserId();
 
   constructor(private routesSvc: RoutesService) {}
@@ -19,10 +21,16 @@ export class SavedRoutesComponent implements OnInit {
   ngOnInit() { this.load(); }
 
   load() {
-    this.routesSvc.list(this.userId).subscribe(r => this.routes = r);
+    this.routesSvc.list(this.userId).subscribe(r => this.savedRoutes = r);
   }
+
   remove(id: string) {
     this.routesSvc.delete(id, this.userId).subscribe(() => this.load());
+  }
+
+  /** Hilfsfunktion für Anzeige */
+  displayRoute(r: RouteRecord): string {
+    return r.name ?? `${r.startLat},${r.startLng} → ${r.endLat},${r.endLng}`;
   }
 
   private getUserId(): string {

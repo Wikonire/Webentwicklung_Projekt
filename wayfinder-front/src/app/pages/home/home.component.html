@@ -1,8 +1,13 @@
-<div class="container">
+<div class="header-row">
   <app-search-form (routeRequested)="currentRoute = $event"></app-search-form>
-
-  <div class="content">
-    <app-map [route]="currentRoute"></app-map>
-    <app-top-routes></app-top-routes>
+  <div class="tab-group">
+    <mat-tab-group>
+      <mat-tab label="Top 10 der letzten Routen"><app-top-routes></app-top-routes></mat-tab>
+      <mat-tab label="Gespeicherte Routen"><app-saved-routes></app-saved-routes></mat-tab>
+    </mat-tab-group>
   </div>
+</div>
+
+<div class="content">
+  <app-map [route]="currentRoute"></app-map>
 </div>

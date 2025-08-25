@@ -1,13 +1,15 @@
 import {Component, Input} from '@angular/core';
+import {CommonModule} from '@angular/common';
 
 @Component({
   selector: 'app-map',
   standalone: true,
+  imports: [CommonModule],
   templateUrl: './map.component.html',
   styleUrl: './map.component.scss'
 })
 export class MapComponent {
 
-  @Input() route:any = null;
+  @Input() route: { from: string; to: string } | null = null;
 
 }

@@ -1,3 +1,119 @@
-.container { padding: 1rem; display: grid; gap: 1rem; }
-.content { display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; }
-@media (max-width: 900px){ .content { grid-template-columns: 1fr; } }
+:host {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  gap: 1rem;
+  padding: clamp(12px, 2vw, 24px);
+  box-sizing: border-box;
+  min-height: 100%;
+  --page-max-width: 1200px;
+  }
+
+:host > * {
+  max-width: var(--page-max-width);
+  margin-inline: auto;
+  width: 100%;
+  }
+
+app-search-form {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  background: color-mix(in oklab, Canvas 96%, black 2%);
+  border-radius: 14px;
+  padding: clamp(10px, 1.5vw, 16px);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+  border: 1px solid color-mix(in oklab, Canvas 92%, black 8%);
+  }
+
+.header-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  align-items: start;
+  }
+
+.tab-group {
+  padding: clamp(10px, 1.5vw, 16px);
+  backdrop-filter: blur(6px);
+  border-radius: 14px;
+  overflow: hidden;
+  background: color-mix(in oklab, Canvas 98%, black 1.5%);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  border: 1px solid color-mix(in oklab, Canvas 95%, black 6%);
+  }
+
+/* Content-Bereich mit Map füllt Resthöhe schön aus */
+.content {
+  display: grid;
+  /* Map nimmt volle Breite; falls später Sidebar dazukommt -> hier Grid anpassen */
+  grid-template-columns: 1fr;
+  align-items: stretch;
+  /* Map-Höhe responsiv: nie zu klein, nie zu groß */
+  min-height: clamp(320px, 62vh, 78vh);
+  background: color-mix(in oklab, Canvas 98%, black 1%);
+  border-radius: 14px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+  border: 1px solid color-mix(in oklab, Canvas 95%, black 6%);
+  padding: clamp(8px, 1.4vw, 16px);
+  }
+
+/* Map-Komponente soll komplett füllen */
+.content app-map {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  min-block-size: inherit;
+  border-radius: 10px;
+  overflow: clip;
+  }
+
+/* Breakpoints – angelehnt an Angular Material (600/960/1280) */
+
+/* ≥ 600px: Tabs & Inhalte etwas dichter */
+@media (min-width: 600px) {
+  :host { gap: 1.25rem; }
+  app-search-form { padding: 14px 16px; }
+  }
+
+/* ≥ 960px: mehr „Card“-Charakter und Layout‑Schärfung */
+@media (min-width: 960px) {
+  :host { gap: 1.5rem; }
+  .content {
+    padding: 18px;
+    min-height: clamp(420px, 66vh, 82vh);
+    }
+  }
+
+@media (min-width: 1600px) {
+  .header-row {
+    grid-template-columns: 1fr 1fr; /* gleiche Breite */
+    align-items: start;
+    }
+  }
+
+/* ≥ 1280px: max-width greift, Inhalte bleiben zentriert */
+@media (min-width: 1280px) {
+  :host { --page-max-width: 1280px; }
+  }
+
+/* Dark Mode: leicht kontrastreicher + weniger Glühen */
+@media (prefers-color-scheme: dark) {
+  app-search-form,
+  .tab-group,
+  .content {
+    background: color-mix(in oklab, Canvas 92%, white 2%);
+    border-color: color-mix(in oklab, Canvas 86%, white 10%);
+    box-shadow: 0 2px 14px rgba(0,0,0,0.25);
+    }
+  }
+
+/* Bewegungsreduktion respektieren */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+    }
+  }
