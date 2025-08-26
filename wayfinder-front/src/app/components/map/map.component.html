@@ -1,5 +1,11 @@
-<div data-testid="map">
-  <div *ngIf="route" data-testid="route-polyline">
-    {{ route.from }} → {{ route.to }}
-  </div>
-</div>
+<mat-card data-testid="map">
+  @if (route) {
+    <mat-card-title>Start: {{ route.from }}, Ziel: {{ route.to }}</mat-card-title>
+    <mat-card-content>
+      <div data-testid="route-polyline">
+      </div>
+    </mat-card-content>
+  } @else {
+    <mat-card-title>Gib ein Start- und Zielort ein um die Route anzuzeigen</mat-card-title>
+  }
+</mat-card>

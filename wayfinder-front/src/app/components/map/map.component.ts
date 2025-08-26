@@ -1,10 +1,11 @@
 import {Component, Input} from '@angular/core';
 import {CommonModule} from '@angular/common';
+import {MatCardModule} from '@angular/material/card';
 
 @Component({
   selector: 'app-map',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, MatCardModule],
   templateUrl: './map.component.html',
   styleUrl: './map.component.scss'
 })
