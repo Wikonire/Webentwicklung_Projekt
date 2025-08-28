@@ -81,27 +81,27 @@ wayfinder-api/        <-- REST API (z. B. Node/Nest/Express, DB)
 
 ## Planungs‑Checkliste
 
-### 0) Projekt & Repos
-- [ ] Repo-Struktur steht: `wayfinder-front/` (SPA) + `wayfinder-api/` (REST+DB)
-- [ ] `.gitignore` je Teilprojekt (node_modules, dist, coverage, .env, .idea)
-- [ ] Root-README mit Struktur, Startanleitung, Technologien
+### Projekt & Repos
+- [X] Repo-Struktur steht: `wayfinder-front/` (SPA) + `wayfinder-api/` (REST+DB)
+- [X] `.gitignore` je Teilprojekt (node_modules, dist, coverage, .env, .idea)
+- [X] Root-README mit Struktur, Startanleitung, Technologien
 
 ---
 
 ### Frontend (Angular 20 + Material + SCSS)
 #### UI & Funktionalität
-- [ ] UI-Skelett: Header, Suchbereich, Kartenbereich, „Top 10 Routen“
-- [ ] Form: Startort + Zielort + „Route berechnen“-Button
+- [X] UI-Skelett: Header, Suchbereich, Kartenbereich, „Top 10 Routen“
+- [X] Form: Startort + Zielort + „Route berechnen“-Button
 - [ ] Autocomplete (OpenRouteService `geocode/autocomplete`)
 - [ ] Geocoding (ORS `geocode/search`) → Koordinaten ermitteln
 - [ ] Routenberechnung (ORS `v2/directions`) → GeoJSON/Polyline
 - [ ] Karte rendern (Leaflet/MapLibre) + Route + Marker Start/Ziel
 - [ ] „Top 10 meistgesuchte Routen“ (localStorage, sortiert, klickbar)
-- [ ] Error-Handling/Toasts (z. B. Angular Material Snackbar)
+- [ ] Error-Handling/Toasts (z.B. Angular Material Snackbar)
 - [ ] Loading-States (Spinner/Progress)
 
 #### Architektur & Qualität
-- [ ] Komponenten: `SearchComponent`, `RouteResultComponent`, `TopRoutesComponent`, `MapComponent`
+- [X] Komponenten: `SearchComponent`, `RouteResultComponent`, `TopRoutesComponent`, `MapComponent`
 - [ ] Services: `OrsService` (API-Aufrufe), `TopRoutesService` (localStorage)
 - [ ] Environment: API-Base-URL, Feature-Flags, ORS‑Proxy‑Pfad
 - [ ] Accessibility: Labels, ARIA, Tastaturnavigation, Kontraste
@@ -109,11 +109,11 @@ wayfinder-api/        <-- REST API (z. B. Node/Nest/Express, DB)
 
 #### Tests (Frontend)
 - [ ] **Unit (Jest)**: Services (Mocks), Komponenten (Inputs/Outputs, Rendering)
-- [ ] **Akzeptanz/E2E (Playwright)**:
+- [X] **Akzeptanz/E2E (Playwright)**:
     - [ ] „Berlin → Hamburg“ ergibt Route
     - [ ] Autocomplete zeigt Vorschläge
     - [ ] Top‑10 wird aktualisiert und anklickbar wiederverwendbar
-- [ ] Coverage-Report (mind. Richtwert z. B. 80%)
+- [ ] Coverage-Report (mind. Richtwert z.B. 80%)
 
 ---
 
