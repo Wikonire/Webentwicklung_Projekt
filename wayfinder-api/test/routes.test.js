@@ -1,5 +1,5 @@
 const request = require('supertest');
-const app = require('../index');
+const app = require('../src/index');
 
 describe('Routes CRUD', () => {
     const userId = 'u1';
