@@ -1,5 +1,5 @@
 <div class="header-row">
-  <app-search-form (routeRequested)="currentRoute = $event"></app-search-form>
+  <app-search-form (routeComputed)="handleRouteComputed($event)"></app-search-form>
   <div class="tab-group">
     <mat-tab-group>
       <mat-tab label="Top 10 der letzten Routen"><app-top-routes></app-top-routes></mat-tab>
@@ -9,5 +9,7 @@
 </div>
 
 <div class="content">
-  <app-map [route]="currentRoute"></app-map>
+  <app-map
+    [geoJsonRouteData]="currentGeoJson()"
+    [route]="currentRouteQuery()"></app-map>
 </div>

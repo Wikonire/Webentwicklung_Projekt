@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import {Component} from '@angular/core';
 import {RouterModule, RouterOutlet} from '@angular/router';
 import {MatToolbarModule} from '@angular/material/toolbar';
 import {MatButtonModule} from '@angular/material/button';
@@ -14,6 +14,4 @@ import {MatButtonModule} from '@angular/material/button';
   ],
   styleUrl: './app.component.scss'
 })
-export class AppComponent {
-  title = 'wayfinder-front';
-}
+export class AppComponent {}

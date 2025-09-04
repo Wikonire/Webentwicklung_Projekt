@@ -1,11 +1,14 @@
 <mat-card data-testid="map">
-  @if (route) {
-    <mat-card-title>Start: {{ route.from }}, Ziel: {{ route.to }}</mat-card-title>
-    <mat-card-content>
-      <div data-testid="route-polyline">
-      </div>
-    </mat-card-content>
-  } @else {
-    <mat-card-title>Gib ein Start- und Zielort ein um die Route anzuzeigen</mat-card-title>
-  }
+
+    <mat-card-title>
+      @if (route) {
+      Start: {{ route.start }}, Ziel: {{ route.destination }}
+      } @else {
+      Gib ein Start- und Zielort ein um die Route anzuzeigen
+    }
+    </mat-card-title>
+  <mat-card-content>
+  <div #mapContainer data-testid="route-polyline" id="map">
+  </div>
+</mat-card-content>
 </mat-card>

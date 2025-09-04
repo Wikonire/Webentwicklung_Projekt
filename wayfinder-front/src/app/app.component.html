@@ -1,7 +1,10 @@
 <mat-toolbar color="primary">
-  Wayfinder
-  <a mat-button routerLink="" routerLinkActive>Home</a>
+  <span>Wayfinder</span>
+  <a mat-button routerLink="" routerLinkActive="active-link">Home</a>
 </mat-toolbar>
-<div class="container">
+<main>
   <router-outlet></router-outlet>
-</div>
+</main>
+<footer class="footer">
+  <p>&copy; 2025 Wayfinder by <a href="https://github.com/Wikonire/Webentwicklung_Projekt">Wikonire</a></p>
+</footer>

@@ -21,14 +21,13 @@ export class SavedRoutesComponent implements OnInit {
   ngOnInit() { this.load(); }
 
   load() {
-    this.routesSvc.list(this.userId).subscribe(r => this.savedRoutes = r);
+    this.routesSvc.list(this.userId).subscribe(routesRecords => this.savedRoutes = routesRecords);
   }
 
   remove(id: string) {
     this.routesSvc.delete(id, this.userId).subscribe(() => this.load());
   }
 
-  /** Hilfsfunktion für Anzeige */
   displayRoute(r: RouteRecord): string {
     return r.name ?? `${r.startLat},${r.startLng} → ${r.endLat},${r.endLng}`;
   }

@@ -1,24 +1,52 @@
-<h2>Route finden</h2>
-<form class="formGrid">
-
-  <mat-form-field>
-    <mat-label>Startort</mat-label>
-    <input matInput aria-label="Startort" id="startControl" type="text" [formControl]="startControl" />
+<form [formGroup]="form" (ngSubmit)="onSubmit()" class="form-grid">
+  <mat-form-field appearance="outline">
+    <mat-label>Routenart</mat-label>
+    <mat-select formControlName="profile">
+      @for (profile of profiles; track profile.label) {
+        <mat-option [value]="profile.value">
+          <mat-icon class="mr-2">{{ profile.icon }}</mat-icon>
+          {{ profile.label }}
+        </mat-option>
+      }
+    </mat-select>
   </mat-form-field>
 
-  <mat-form-field>
-    <mat-label>Zielort</mat-label>
-    <input matInput aria-label="Zielort" id="endControl" type="text" [formControl]="endControl" />
+  <mat-form-field appearance="outline">
+    <mat-label>Start</mat-label>
+    <input matInput
+           type="text"
+           [matAutocomplete]="autoStart"
+           [formControl]="form.controls.startText">
+    <mat-autocomplete #autoStart="matAutocomplete"
+                      [displayWith]="displaySuggestionLabel"
+                      (optionSelected)="handleStartSelected($event)">
+      @for (suggestion of startSuggestions$|async; track suggestion.label) {
+        <mat-option [value]="suggestion">
+          {{ suggestion.label }}
+        </mat-option>
+      }
+
+    </mat-autocomplete>
   </mat-form-field>
 
-  <button mat-raised-button (click)="onClear()">Eingaben löschen</button>
-  <button
-    mat-raised-button
-    color="primary"
-    (click)="onSubmit()"
-    data-testid="route-button">
+  <mat-form-field appearance="outline">
+    <mat-label>Ziel</mat-label>
+    <input matInput
+           type="text"
+           [matAutocomplete]="autoDest"
+           [formControl]="form.controls.destinationText">
+    <mat-autocomplete #autoDest="matAutocomplete"
+                      [displayWith]="displaySuggestionLabel"
+                      (optionSelected)="handleDestinationSelected($event)">
+      <mat-option *ngFor="let suggestion of destinationSuggestions$ | async" [value]="suggestion">
+        {{ suggestion.label }}
+      </mat-option>
+    </mat-autocomplete>
+  </mat-form-field>
+
+  <button mat-flat-button color="primary" type="submit"
+          [disabled]="!form.controls.startText.value || !form.controls.destinationText.value">
     Route berechnen
   </button>
-
+  <button mat-button type="button" (click)="onClear()">Leeren</button>
 </form>
-
