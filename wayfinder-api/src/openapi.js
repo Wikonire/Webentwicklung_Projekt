@@ -1,6 +1,7 @@
 const PORT = process.env.PORT || 3000;
 const SERVER_URL = process.env.SERVER_URL || `http://localhost:${PORT}`;
 
+/* ---------- Schemas ---------- */
 const ErrorSchema = {
     type: 'object',
     properties: {
@@ -8,6 +9,30 @@ const ErrorSchema = {
         detail: { type: 'string' },
         code: { oneOf: [{ type: 'string' }, { type: 'number' }] }
     }
+};
+
+// Profil-Auswahl wie im Backend validiert
+const OrsProfile = {
+    type: 'string',
+    enum: ['driving-car', 'foot-walking'],
+    example: 'driving-car'
+};
+
+// Normalisierte Suggestion (so liefert dein Backend Autocomplete/Geocode)
+const Suggestion = {
+    type: 'object',
+    required: ['label', 'coord'],
+    properties: {
+        label: { type: 'string' },
+        coord: {
+            type: 'array',
+            minItems: 2,
+            maxItems: 2,
+            items: { type: 'number' },
+            description: '[lon, lat]'
+        }
+    },
+    example: { label: 'Zürich, CHE', coord: [8.5417, 47.3769] }
 };
 
 const GeoJSONLineString = {
@@ -23,6 +48,7 @@ const GeoJSONLineString = {
     }
 };
 
+// WICHTIG: summary.{distance,duration} statt distance/duration auf Root
 const FeatureCollectionLineString = {
     type: 'object',
     required: ['type', 'features'],
@@ -39,9 +65,14 @@ const FeatureCollectionLineString = {
                     properties: {
                         type: 'object',
                         properties: {
-                            distance: { type: 'number', description: 'Meter' },
-                            duration: { type: 'number', description: 'Sekunden' },
-                            profile:  { type: 'string' }
+                            profile: { $ref: '#/components/schemas/OrsProfile' },
+                            summary: {
+                                type: 'object',
+                                properties: {
+                                    distance: { type: 'number', description: 'Meter' },
+                                    duration: { type: 'number', description: 'Sekunden' }
+                                }
+                            }
                         }
                     }
                 }
@@ -50,14 +81,16 @@ const FeatureCollectionLineString = {
     }
 };
 
-const OPENAPI = {
+export const OPENAPI = {
     openapi: '3.0.3',
     info: { title: 'Wayfinder API', version: '1.1.0' },
     servers: [{ url: SERVER_URL }],
     components: {
         schemas: {
             Error: ErrorSchema,
-            FeatureCollectionLineString: FeatureCollectionLineString,
+            OrsProfile,
+            Suggestion,
+            FeatureCollectionLineString,
             CreateRouteDto: {
                 type: 'object',
                 required: ['userId','startLat','startLng','endLat','endLng','geometry'],
@@ -95,10 +128,10 @@ const OPENAPI = {
         }
     },
     paths: {
-        // ---------- ORS Proxy ----------
+        /* ---------- ORS Proxy ---------- */
         '/ors/autocomplete': {
             get: {
-                summary: 'Autocomplete (Proxy zu ORS Pelias)',
+                summary: 'Autocomplete (Proxy zu ORS Pelias, normalisiert)',
                 parameters: [
                     { name: 'query', in: 'query', required: true, schema: { type: 'string' }, description: 'Suchtext' },
                     { name: 'size',  in: 'query', schema: { type: 'integer', minimum: 1, maximum: 20, default: 10 } },
@@ -109,16 +142,39 @@ const OPENAPI = {
                     { name: 'layers',in: 'query', schema: { type: 'string' }, description: 'z. B. locality,region,address' }
                 ],
                 responses: {
-                    '200': { description: 'OK (Pelias FeatureCollection)', content: { 'application/json': { schema: { type: 'object' } } } },
+                    '200': {
+                        description: 'OK',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        features: { type: 'array', items: { $ref: '#/components/schemas/Suggestion' } }
+                                    }
+                                },
+                                examples: {
+                                    default: {
+                                        value: {
+                                            features: [
+                                                { label: 'Zürich, CHE', coord: [8.5417, 47.3769] },
+                                                { label: 'Bern, CHE',   coord: [7.4474, 46.9481] }
+                                            ]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
                     '400': { description: 'Bad Request', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
                     '401': { description: 'Unauthorized (Upstream)', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
                     '429': { description: 'Rate limit',  content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } }
                 }
             }
         },
+
         '/ors/geocode': {
             get: {
-                summary: 'Geocode Search (Proxy zu ORS Pelias)',
+                summary: 'Geocode Search (Proxy zu ORS Pelias, normalisiert)',
                 parameters: [
                     { name: 'query', in: 'query', required: true, schema: { type: 'string' } },
                     { name: 'size',  in: 'query', schema: { type: 'integer', minimum: 1, maximum: 20, default: 10 } },
@@ -129,33 +185,19 @@ const OPENAPI = {
                     { name: 'layers',in: 'query', schema: { type: 'string' } }
                 ],
                 responses: {
-                    '200': { description: 'OK (Pelias FeatureCollection)', content: { 'application/json': { schema: { type: 'object' } } } },
-                    '400': { description: 'Bad Request', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
-                    '401': { description: 'Unauthorized (Upstream)', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
-                    '429': { description: 'Rate limit',  content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } }
-                }
-            }
-        },
-        '/ors/directions': {
-            post: {
-                summary: 'Directions (Proxy zu ORS)',
-                requestBody: {
-                    required: true,
-                    content: { 'application/json': {
-                            schema: {
-                                type: 'object',
-                                required: ['start','end'],
-                                properties: {
-                                    start: { type: 'array', items: { type: 'number' }, minItems: 2, maxItems: 2, description: '[lon,lat]' },
-                                    end:   { type: 'array', items: { type: 'number' }, minItems: 2, maxItems: 2, description: '[lon,lat]' },
-                                    profile: { type: 'string', default: 'driving-car' }
+                    '200': {
+                        description: 'OK',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        features: { type: 'array', items: { $ref: '#/components/schemas/Suggestion' } }
+                                    }
                                 }
-                            },
-                            example: { start: [7.59,47.56], end: [8.31,47.05], profile: 'driving-car' }
-                        } }
-                },
-                responses: {
-                    '200': { description: 'GeoJSON FeatureCollection (LineString)', content: { 'application/json': { schema: { $ref: '#/components/schemas/FeatureCollectionLineString' } } } },
+                            }
+                        }
+                    },
                     '400': { description: 'Bad Request', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
                     '401': { description: 'Unauthorized (Upstream)', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
                     '429': { description: 'Rate limit',  content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } }
@@ -163,7 +205,43 @@ const OPENAPI = {
             }
         },
 
-        // ---------- Routes CRUD ----------
+        '/ors/directions': {
+            post: {
+                summary: 'Directions (Proxy zu ORS)',
+                requestBody: {
+                    required: true,
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                required: ['start','end'],
+                                properties: {
+                                    start: { type: 'array', items: { type: 'number' }, minItems: 2, maxItems: 2, description: '[lon,lat]' },
+                                    end:   { type: 'array', items: { type: 'number' }, minItems: 2, maxItems: 2, description: '[lon,lat]' },
+                                    profile: {
+                                        $ref: '#/components/schemas/OrsProfile',
+                                        default: 'driving-car',
+                                        description: 'Routenart (Auto oder zu Fuß)'
+                                    }
+                                }
+                            },
+                            example: { start: [7.59,47.56], end: [8.31,47.05], profile: 'driving-car' }
+                        }
+                    }
+                },
+                responses: {
+                    '200': {
+                        description: 'GeoJSON FeatureCollection (LineString)',
+                        content: { 'application/json': { schema: { $ref: '#/components/schemas/FeatureCollectionLineString' } } }
+                    },
+                    '400': { description: 'Bad Request', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                    '401': { description: 'Unauthorized (Upstream)', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                    '429': { description: 'Rate limit',  content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } }
+                }
+            }
+        },
+
+        /* ---------- Routes CRUD ---------- */
         '/routes': {
             get: {
                 summary: 'Alle Routen eines Nutzers',
@@ -212,5 +290,3 @@ const OPENAPI = {
         }
     }
 };
-
-module.exports = { OPENAPI };

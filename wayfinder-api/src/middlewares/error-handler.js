@@ -1,6 +1,6 @@
 const isProd = process.env.NODE_ENV === 'production';
 
-module.exports = (err, req, res, next) => {
+export default (err, req, res, next) => {
     if (res.headersSent) return next(err);
 
     if (process.env.NODE_ENV !== 'test') {

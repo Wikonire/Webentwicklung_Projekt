@@ -9,4 +9,4 @@ function validateCreateRoute(b) {
     return null;
 }
 
-module.exports = { validateCreateRoute };
+export {validateCreateRoute} ;

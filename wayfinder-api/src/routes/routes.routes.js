@@ -1,6 +1,6 @@
-const express = require('express');
-const repo = require('../repos/routes.repo');
-const { validateCreateRoute } = require('../validators/routes.validators');
+import express from 'express';
+import repo from '../repos/routes.repo.js';
+import { validateCreateRoute } from '../validators/routes.validators.js';
 
 const router = express.Router();
 
@@ -33,4 +33,4 @@ router.delete('/:id', (req, res) => {
     res.sendStatus(204);
 });
 
-module.exports = router;
+export default router;

@@ -1,12 +1,20 @@
-const fs = require('fs'); const path = require('path');
-const Database = require('better-sqlite3');
-const { DB_PATH } = require('./config');
+import fs from 'fs';
+import path from 'path';
+import Database from 'better-sqlite3';
+import { DB_PATH } from './config.js';
 
+// Verzeichnis aus DB_PATH ableiten und sicherstellen
 const DATA_DIR = path.dirname(DB_PATH);
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+}
 
+// DB öffnen + sinnvolle Pragmas
 const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
+db.pragma('foreign_keys = ON');
+
+// Tabelle anlegen (falls nicht vorhanden)
 db.prepare(`
 CREATE TABLE IF NOT EXISTS routes (
   id TEXT PRIMARY KEY,
@@ -20,6 +28,6 @@ CREATE TABLE IF NOT EXISTS routes (
   duration INTEGER,
   geometry TEXT NOT NULL,
   createdAt TEXT NOT NULL DEFAULT (datetime('now'))
-)` ).run();
+)`).run();
 
-module.exports = db;
+export default db;

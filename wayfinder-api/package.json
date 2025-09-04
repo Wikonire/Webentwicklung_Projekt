@@ -1,7 +1,7 @@
 {
   "name": "wayfinder-api",
   "private": true,
-  "type": "commonjs",
+  "type": "module",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/server.js",

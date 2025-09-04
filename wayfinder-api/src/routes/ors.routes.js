@@ -1,86 +1,148 @@
-const express = require('express');
-const rateLimit = require('express-rate-limit');
-const { autocomplete, geocode, directions } = require('../services/ors.service');
+import express from 'express';
+import rateLimit from 'express-rate-limit';
+import { autocomplete, geocode, directions } from '../services/ors.service.js';
 
 const router = express.Router();
 router.use(rateLimit({ windowMs: 60_000, max: 120 }));
 
-// kleine Helper
 const toNum = v => (v === undefined ? undefined : Number(v));
 const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
+
+const allowedProfiles = new Set([
+    'driving-car',
+    'driving-hgv',
+    'cycling-regular',
+    'cycling-road',
+    'cycling-mountain',
+    'cycling-electric',
+    'foot-walking',
+    'foot-hiking',
+    'wheelchair'
+]);
+
+
+/** ---------- helpers: robust label builder + mapper ---------- */
+function buildSuggestionLabel(properties) {
+    if (typeof properties?.label === 'string' && properties.label.trim()) return properties.label;
+    const candidates = [
+        properties?.name,
+        properties?.locality ?? properties?.localadmin ?? properties?.borough ?? properties?.county,
+        properties?.region ?? properties?.state,
+        properties?.country
+    ];
+    const parts = candidates
+        .map(p =>
+            typeof p === 'string' ? p
+                : typeof p === 'number' ? String(p)
+                    : (p && typeof p.label === 'string') ? p.label
+                        : ''
+        )
+        .filter(Boolean);
+    return parts.join(', ');
+}
+
+function mapFeatureToSuggestion(feature) {
+    const lon = Number(feature?.geometry?.coordinates?.[0]);
+    const lat = Number(feature?.geometry?.coordinates?.[1]);
+    return {
+        label: buildSuggestionLabel(feature?.properties ?? {}),
+        coord: [lon, lat],
+    };
+}
+/** ------------------------------------------------------------ */
 
 router.get('/autocomplete', async (req, res) => {
     const text = String(req.query.query || '').trim();
     if (!text) return res.status(400).json({ error: 'query erforderlich' });
 
-    // optionale Query-Parameter → Pelias/ORS
-    const q = { text };
-    // Größe begrenzen (z. B. 1..20)
-    const size = toNum(req.query.size);
-    q.size = Number.isFinite(size) ? clamp(size, 1, 20) : 10;
+    const queryToOrs = { text };
+    const requestedSize = toNum(req.query.size);
+    queryToOrs.size = Number.isFinite(requestedSize) ? clamp(requestedSize, 1, 20) : 10;
 
-    if (req.query.lang) q.lang = String(req.query.lang);                 // z.B. 'de'
-    if (req.query.country) q['boundary.country'] = String(req.query.country); // z.B. 'CHE'
+    if (req.query.lang) queryToOrs.lang = String(req.query.lang);
+    if (req.query.country) queryToOrs['boundary.country'] = String(req.query.country);
 
     const lat = toNum(req.query.lat);
     const lon = toNum(req.query.lon);
     if (Number.isFinite(lat) && Number.isFinite(lon)) {
-        q['focus.point.lat'] = lat;
-        q['focus.point.lon'] = lon;
+        queryToOrs['focus.point.lat'] = lat;
+        queryToOrs['focus.point.lon'] = lon;
     }
+    if (req.query.layers) queryToOrs.layers = String(req.query.layers);
 
-    if (req.query.layers) q.layers = String(req.query.layers);           // z.B. 'locality,region,address'
-
-    const r = await autocomplete(q); // { ok, status, data }
-    if (!r.ok) return res.status(r.status).json(typeof r.data === 'string' ? { error: r.data } : (r.data || { error: 'Upstream error' }));
-    return res.status(200).json(r.data);
+    const upstream = await autocomplete(queryToOrs);
+    if (!upstream.ok) {
+        return res.status(upstream.status).json(typeof upstream.data === 'string' ? { error: upstream.data } : (upstream.data || { error: 'Upstream error' }));
+    }
+    const features = Array.isArray(upstream.data?.features) ? upstream.data.features : [];
+    const suggestions = features.map(mapFeatureToSuggestion);
+    return res.status(200).json({ features: suggestions });
 });
 
 router.get('/geocode', async (req, res) => {
     const text = String(req.query.query || '').trim();
     if (!text) return res.status(400).json({ error: 'query erforderlich' });
 
-    const q = { text };
-    const size = toNum(req.query.size);
-    q.size = Number.isFinite(size) ? clamp(size, 1, 20) : 10;
+    const queryToOrs = { text };
+    const requestedSize = toNum(req.query.size);
+    queryToOrs.size = Number.isFinite(requestedSize) ? clamp(requestedSize, 1, 20) : 10;
 
-    if (req.query.lang) q.lang = String(req.query.lang);
-    if (req.query.country) q['boundary.country'] = String(req.query.country);
+    if (req.query.lang) queryToOrs.lang = String(req.query.lang);
+    if (req.query.country) queryToOrs['boundary.country'] = String(req.query.country);
 
     const lat = toNum(req.query.lat);
     const lon = toNum(req.query.lon);
     if (Number.isFinite(lat) && Number.isFinite(lon)) {
-        q['focus.point.lat'] = lat;
-        q['focus.point.lon'] = lon;
+        queryToOrs['focus.point.lat'] = lat;
+        queryToOrs['focus.point.lon'] = lon;
     }
+    if (req.query.layers) queryToOrs.layers = String(req.query.layers);
 
-    if (req.query.layers) q.layers = String(req.query.layers);
-
-    const r = await geocode(q);
-    if (!r.ok) return res.status(r.status).json(typeof r.data === 'string' ? { error: r.data } : (r.data || { error: 'Upstream error' }));
-    return res.status(200).json(r.data);
+    const upstream = await geocode(queryToOrs);
+    if (!upstream.ok) {
+        return res.status(upstream.status).json(typeof upstream.data === 'string' ? { error: upstream.data } : (upstream.data || { error: 'Upstream error' }));
+    }
+    const features = Array.isArray(upstream.data?.features) ? upstream.data.features : [];
+    const suggestions = features.map(mapFeatureToSuggestion);
+    return res.status(200).json({ features: suggestions });
 });
 
 router.post('/directions', async (req, res) => {
     const { start, end, profile = 'driving-car' } = req.body || {};
-    const okPair = (p) => Array.isArray(p) && p.length === 2 && p.every(Number.isFinite);
-    if (!okPair(start) || !okPair(end)) return res.status(400).json({ error: 'start/end als [lon,lat]' });
+    const isLngLat = (p) => Array.isArray(p) && p.length === 2 && p.every(Number.isFinite);
+    if (!isLngLat(start) || !isLngLat(end)) return res.status(400).json({ error: 'start/end als [lon,lat]' });
 
-    const r = await directions(profile, start, end);
-    if (!r.ok) return res.status(r.status).json(typeof r.data === 'string' ? { error: r.data } : (r.data || { error: 'Upstream error' }));
+    const effectiveProfile = String(profile);
+    if (!allowedProfiles.has(effectiveProfile)) {
+        return res.status(400).json({ error: `profile muss eines von ${Array.from(allowedProfiles).join(', ')} sein` });
+    }
 
-    const route = r.data?.routes?.[0];
+    const upstream = await directions(effectiveProfile, start, end);
+    if (!upstream.ok) {
+        return res.status(upstream.status).json(typeof upstream.data === 'string' ? { error: upstream.data } : (upstream.data || { error: 'Upstream error' }));
+    }
+
+    const route = upstream.data?.routes?.[0];
     if (route?.geometry?.type === 'LineString') {
+        // ✔ Immer FeatureCollection mit summary.{distance,duration} zurückgeben
         return res.json({
             type: 'FeatureCollection',
             features: [{
                 type: 'Feature',
-                properties: { distance: route.summary?.distance, duration: route.summary?.duration, profile },
+                properties: {
+                    summary: { distance: route.summary?.distance, duration: route.summary?.duration },
+                    profile: effectiveProfile
+                },
                 geometry: route.geometry
             }]
         });
     }
-    return res.json(r.data);
+
+    if (upstream.data?.type === 'FeatureCollection') {
+        return res.json(upstream.data);
+    }
+
+    return res.json({ type: 'FeatureCollection', features: [] });
 });
 
-module.exports = router;
+export default router;

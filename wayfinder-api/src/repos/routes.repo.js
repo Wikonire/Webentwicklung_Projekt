@@ -1,5 +1,6 @@
-const crypto = require('crypto');
-const db = require('../db');
+import crypto from 'crypto';
+import db from '../db.js'
+
 const uuid = () => crypto.randomUUID();
 
 const insert = (dto) => {
@@ -38,4 +39,4 @@ const remove = (id, userId) => {
     return info.changes > 0;
 };
 
-module.exports = { insert, listByUser, getOne, remove };
+export default { insert, listByUser, getOne, remove };

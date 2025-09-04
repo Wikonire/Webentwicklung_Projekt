@@ -1,13 +1,13 @@
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const swaggerUi = require('swagger-ui-express');
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import swaggerUi from 'swagger-ui-express';
 
-const { OPENAPI } = require('./openapi');
-const { corsOptions } = require('./config');
-const orsRouter = require('./routes/ors.routes');
-const routesRouter = require('./routes/routes.routes');
-const errorHandler = require('./middlewares/error-handler');
+import { OPENAPI } from './openapi.js';
+import { corsOptions } from './config.js';
+import orsRouter from './routes/ors.routes.js';
+import routesRouter from './routes/routes.routes.js';
+import errorHandler from './middlewares/error-handler.js';
 
 const app = express();
 app.use(express.json({ limit: '1mb' }));
@@ -23,4 +23,4 @@ app.use('/routes', routesRouter);
 
 app.use(errorHandler); // letzter Middleware
 
-module.exports = app;
+export default app;
