@@ -9,10 +9,6 @@ describe('SavedRoutesComponent', () => {
   let fixture: ComponentFixture<SavedRoutesComponent>;
 
   beforeEach(async () => {
-    Object.defineProperty(globalThis, 'crypto', {
-      value: { randomUUID: jest.fn(() => 'mocked-uuid') },
-      writable: true,
-    });
     await TestBed.configureTestingModule({
       providers: [
         provideHttpClient(withInterceptorsFromDi()),

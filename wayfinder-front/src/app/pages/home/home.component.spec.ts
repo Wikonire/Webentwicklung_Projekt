@@ -27,10 +27,6 @@ describe('HomeComponent', () => {
   };
 
   beforeEach(async () => {
-    Object.defineProperty(globalThis, 'crypto', {
-      value: { randomUUID: jest.fn(() => 'mocked-uuid') },
-      writable: true,
-    });
     await TestBed.configureTestingModule({
       imports: [HomeComponent, SearchFormComponent, MapComponent, TopRoutesComponent, SavedRoutesComponent, MatTabsModule],
       providers: [

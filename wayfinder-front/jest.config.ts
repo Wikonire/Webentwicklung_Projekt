@@ -5,6 +5,7 @@ const config: Config = {
   testEnvironment: 'jsdom',
   testMatch: ['**/src/**/?(*.)+(spec).ts'],
   moduleFileExtensions: ['ts', 'html', 'js', 'json'],
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   testEnvironmentOptions: {
     url: 'http://localhost/',
   },
