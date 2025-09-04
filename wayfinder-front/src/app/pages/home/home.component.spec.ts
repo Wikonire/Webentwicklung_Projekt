@@ -5,7 +5,11 @@ import {provideHttpClientTesting} from '@angular/common/http/testing';
 import {OrsService} from '../../services/ors.service';
 import {of} from 'rxjs';
 import {provideHttpClient, withInterceptorsFromDi} from '@angular/common/http';
-import {CommonModule} from '@angular/common';
+import {MapComponent} from '../../components/map/map.component';
+import {SearchFormComponent} from '../../components/search-form/search-form.component';
+import {TopRoutesComponent} from '../../components/top-routes/top-routes.component';
+import {SavedRoutesComponent} from '../../components/saved-routes/saved-routes.component';
+import {MatTabsModule} from '@angular/material/tabs';
 
 describe('HomeComponent', () => {
   let component: HomeComponent;
@@ -28,7 +32,7 @@ describe('HomeComponent', () => {
       writable: true,
     });
     await TestBed.configureTestingModule({
-      imports: [HomeComponent, CommonModule],
+      imports: [HomeComponent, SearchFormComponent, MapComponent, TopRoutesComponent, SavedRoutesComponent, MatTabsModule],
       providers: [
         provideHttpClient(withInterceptorsFromDi()),
         provideHttpClientTesting(),

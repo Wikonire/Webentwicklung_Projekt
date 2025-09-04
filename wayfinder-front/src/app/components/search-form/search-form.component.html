@@ -38,9 +38,11 @@
     <mat-autocomplete #autoDest="matAutocomplete"
                       [displayWith]="displaySuggestionLabel"
                       (optionSelected)="handleDestinationSelected($event)">
-      <mat-option *ngFor="let suggestion of destinationSuggestions$ | async" [value]="suggestion">
+      @for (suggestion of destinationSuggestions$ | async; track suggestion.label) {
+      <mat-option [value]="suggestion">
         {{ suggestion.label }}
       </mat-option>
+      }
     </mat-autocomplete>
   </mat-form-field>
 
