@@ -8,7 +8,7 @@ describe('TopRoutesComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [TopRoutesComponent]
+      imports: [TopRoutesComponent]
     })
     .compileComponents();
 

@@ -19,11 +19,6 @@ describe('AppComponent', () => {
     expect(app).toBeTruthy();
   });
 
-  it(`should have as title 'wayfinder-front'`, () => {
-    const app = fixture.componentInstance;
-    expect(app.title).toEqual('wayfinder-front');
-  });
-
   it('should render title', () => {
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;

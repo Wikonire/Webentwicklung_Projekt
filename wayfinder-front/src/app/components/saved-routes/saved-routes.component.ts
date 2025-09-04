@@ -16,20 +16,20 @@ export class SavedRoutesComponent implements OnInit {
   savedRoutes: RouteRecord[] = [];
   userId = this.getUserId();
 
-  constructor(private routesSvc: RoutesService) {}
+  constructor(private routesService: RoutesService) {}
 
   ngOnInit() { this.load(); }
 
   load() {
-    this.routesSvc.list(this.userId).subscribe(routesRecords => this.savedRoutes = routesRecords);
+    this.routesService.list(this.userId).subscribe(routesRecords => this.savedRoutes = routesRecords);
   }
 
   remove(id: string) {
-    this.routesSvc.delete(id, this.userId).subscribe(() => this.load());
+    this.routesService.delete(id, this.userId).subscribe(() => this.load());
   }
 
-  displayRoute(r: RouteRecord): string {
-    return r.name ?? `${r.startLat},${r.startLng} → ${r.endLat},${r.endLng}`;
+  displayRoute(routeRecord: RouteRecord): string {
+    return routeRecord.name ?? `${routeRecord.startLat},${routeRecord.startLng} → ${routeRecord.endLat},${routeRecord.endLng}`;
   }
 
   private getUserId(): string {

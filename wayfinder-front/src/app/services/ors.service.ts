@@ -25,7 +25,6 @@ export class OrsService {
     return this.httpClient.get<any>(`${this.apiBaseUrl}/ors/autocomplete`, { params: httpParams }).pipe(
       map((rawResponse: any) => {
         const features: any[] = rawResponse?.features ?? [];
-        console.log(features);
         return features.map((feature: any): Suggestion => ({
           label: feature?.properties?.label ?? feature?.properties?.name ?? 'Unbekannt',
           coord: [
@@ -34,11 +33,6 @@ export class OrsService {
           ] as LngLat,
         }));
       }),
-      map((suggestions: Suggestion[]) => {
-        console.log(suggestions)
-        return suggestions;
-      }),
-
       catchError(() => of([]))
     );
   }
