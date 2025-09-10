@@ -1,7 +1,12 @@
-<h2>10 letzten Routen</h2>
+<h2>10 letzte Routen</h2>
 <mat-list data-testid="top-routes-list">
-  @for (route of topRoutes; track route.from) {
-    <mat-list-item>{{ route.from }} → {{ route.to }}</mat-list-item>
+  @for (route of topRoutes; track route.id) {
+    <mat-list-item>
+      <span matListItemTitle>{{ route.start }} → {{ route.destination }} ({{ route.profile }})</span>
+      <button mat-icon-button matListItemMeta (click)="save(route)">
+        <mat-icon>save</mat-icon>
+      </button>
+    </mat-list-item>
   } @empty {
     <mat-list-item>Bisher keine Suchanfragen getätigt</mat-list-item>
   }

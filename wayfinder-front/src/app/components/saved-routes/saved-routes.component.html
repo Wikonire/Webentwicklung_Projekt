@@ -1,7 +1,7 @@
 <h2>Gespeicherte Routen</h2>
 
 <mat-list data-testid="saved-routes-list">
-  @for (route of savedRoutes; track route.id) {
+  @for (route of savedRoutes(); track route.id) {
     <mat-list-item>
       <span>{{ displayRoute(route) }}</span>
       <button

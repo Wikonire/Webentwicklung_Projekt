@@ -11,8 +11,8 @@ import {
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import * as Leaflet from 'leaflet';
-import { RouteQuery } from '../../models/route-query.model';
 import { RouteFeatureCollection } from '../../models/route-feature-collection.model';
+import { RouteResult } from '../../models/route-result.model';
 
 @Component({
   selector: 'app-map',
@@ -22,9 +22,10 @@ import { RouteFeatureCollection } from '../../models/route-feature-collection.mo
   styleUrls: ['./map.component.scss']
 })
 export class MapComponent implements AfterViewInit {
+  // FeatureCollection für Leaflet-Polyline
   geoJsonRouteData = input<RouteFeatureCollection | null>(null);
 
-  @Input() route: RouteQuery | null = null;
+  @Input() route: RouteResult | null = null;
 
   @ViewChild('mapContainer', { static: true }) mapContainerRef!: ElementRef<HTMLDivElement>;
 
@@ -32,20 +33,16 @@ export class MapComponent implements AfterViewInit {
   private leafletRouteLayer?: Leaflet.GeoJSON;
 
   constructor(private angularInjector: Injector) {
-    // Reagiert auf GeoJSON-Änderungen, sobald Map vorhanden ist
-    effect(
-      () => {
-        const currentGeoJson = this.geoJsonRouteData();
-        if (!this.leafletMap) return;
+    effect(() => {
+      const currentGeoJson = this.geoJsonRouteData();
+      if (!this.leafletMap) return;
 
-        if (currentGeoJson) {
-          this.renderRouteOnMap(currentGeoJson);
-        } else {
-          this.clearRouteLayer();
-        }
-      },
-      { injector: this.angularInjector }
-    );
+      if (currentGeoJson) {
+        this.renderRouteOnMap(currentGeoJson);
+      } else {
+        this.clearRouteLayer();
+      }
+    }, { injector: this.angularInjector });
   }
 
   ngAfterViewInit(): void {
@@ -65,17 +62,14 @@ export class MapComponent implements AfterViewInit {
   }
 
   private renderRouteOnMap(routeGeoJson: RouteFeatureCollection): void {
-    if (this.leafletMap) {
-      this.clearRouteLayer();
+    this.clearRouteLayer();
+    this.leafletRouteLayer = Leaflet.geoJSON(routeGeoJson as any, {
+      style: { color: 'blue', weight: 5 }
+    }).addTo(this.leafletMap!);
 
-      this.leafletRouteLayer = Leaflet.geoJSON(routeGeoJson as any, {
-        style: {color: 'blue', weight: 5}
-      }).addTo(this.leafletMap);
-
-      const routeBounds = this.leafletRouteLayer.getBounds();
-      if (routeBounds.isValid()) {
-        this.leafletMap.fitBounds(routeBounds, {padding: [20, 20]});
-      }
+    const routeBounds = this.leafletRouteLayer.getBounds();
+    if (routeBounds.isValid()) {
+      this.leafletMap!.fitBounds(routeBounds, { padding: [20, 20] });
     }
   }
 

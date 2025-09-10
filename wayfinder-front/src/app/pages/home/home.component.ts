@@ -7,6 +7,8 @@ import {MatTabsModule} from '@angular/material/tabs';
 import {RouteQuery} from '../../models/route-query.model';
 import {RouteStore} from '../../services/route-store.service';
 import {RouteResult} from '../../models/route-result.model';
+import {OrsProfile} from '../../models/ors-profile.model';
+import {Suggestion} from '../../services/ors.service';
 
 @Component({
   selector: 'app-home',
@@ -15,14 +17,13 @@ import {RouteResult} from '../../models/route-result.model';
   imports: [SearchFormComponent, MapComponent, TopRoutesComponent, SavedRoutesComponent, MatTabsModule]
 })
 export class HomeComponent {
-  private routeStore = inject(RouteStore);
-
+  public routeStore = inject(RouteStore);
+  public currentGeoJson = this.routeStore.routeGeoJson;
   handleRouteComputed(routeResult: RouteResult): void {
     this.routeStore.setComputedRoute(routeResult);
   }
 
-
-  currentGeoJson = this.routeStore.routeGeoJson;
+  topRoutes = this.routeStore.getTopSearches();
 
   currentRouteQuery = computed<RouteQuery | null>(() => {
     const result = this.routeStore.routeResult();
@@ -31,4 +32,15 @@ export class HomeComponent {
     const [startName, destinationName] = result.name.split(' → ');
     return { start: startName ?? '', destination: destinationName ?? '' };
   });
+
+  findRoute($event: { start: Suggestion; destination: Suggestion; profile: OrsProfile }) {
+      this.routeStore.computeRoute(
+        $event.start.coord,
+        $event.destination.coord,
+        $event.profile,
+        $event.start.label,
+        $event.destination.label
+      );
+
+  }
 }

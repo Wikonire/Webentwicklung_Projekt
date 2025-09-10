@@ -9,6 +9,7 @@ import {OrsProfile} from '../models/ors-profile.model';
 export type LngLat = [number, number];
 
 export interface Suggestion {
+  id: number;
   label: string;
   coord: LngLat;
 }
@@ -17,34 +18,32 @@ export interface Suggestion {
 export class OrsService {
   private apiBaseUrl = environment.apiBaseUrl.replace(/\/+$/, '');
 
-  constructor(private httpClient: HttpClient) {}
+  constructor(private httpClient: HttpClient) {
+  }
 
   /** Autocomplete nach ORS (Proxy: GET /ors/autocomplete?query=...) */
   autocomplete(searchText: string): Observable<Suggestion[]> {
-    const httpParams = new HttpParams().set('query', searchText);
-    return this.httpClient.get<any>(`${this.apiBaseUrl}/ors/autocomplete`, { params: httpParams }).pipe(
-      map((rawResponse: any) => {
-        const features: any[] = rawResponse?.features ?? [];
-        return features.map((feature: any): Suggestion => ({
-          label: feature?.properties?.label ?? feature?.properties?.name ?? 'Unbekannt',
-          coord: [
-            feature?.geometry?.coordinates?.[0],
-            feature?.geometry?.coordinates?.[1],
-          ] as LngLat,
-        }));
-      }),
+    const trimmed = (searchText ?? '').trim();
+    if (!trimmed) return of([]);
+    const httpParams = new HttpParams().set('query', trimmed);
+    return this.httpClient.get<{
+      suggestions: Suggestion[]
+    }>(`${this.apiBaseUrl}/ors/autocomplete`, {params: httpParams}).pipe(
+      map(response => Array.isArray(response?.suggestions) ? response.suggestions : []),
       catchError(() => of([]))
     );
   }
 
-  /** Geocode nach ORS (Proxy: GET /ors/geocode?query=...) */
+
+  /** Forward Geocoding via Proxy: GET /ors/geocode?query=...  (optional gleicher Mapper) */
   geocode(searchText: string): Observable<Suggestion[]> {
     const httpParams = new HttpParams().set('query', searchText);
-    return this.httpClient.get<any>(`${this.apiBaseUrl}/ors/geocode`, { params: httpParams }).pipe(
+    return this.httpClient.get<any>(`${this.apiBaseUrl}/ors/geocode`, {params: httpParams}).pipe(
       map((rawResponse: any) => {
         const features: any[] = rawResponse?.features ?? [];
         return features.map((feature: any): Suggestion => ({
-          label: feature?.properties?.label ?? feature?.properties?.name ?? 'Unbekannt',
+          id: feature.id,
+          label: feature?.properties?.label,
           coord: [
             feature?.geometry?.coordinates?.[0],
             feature?.geometry?.coordinates?.[1],
@@ -85,7 +84,7 @@ export class OrsService {
                 {
                   type: 'Feature',
                   geometry: lineString,
-                  properties: { summary: rawResponse?.routes?.[0]?.summary ?? {} }
+                  properties: {summary: rawResponse?.routes?.[0]?.summary ?? {}}
                 }
               ]
             };
@@ -103,9 +102,14 @@ export class OrsService {
   directionsAsRouteResult(
     startCoordinates: LngLat,
     destinationCoordinates: LngLat,
-    profile: OrsProfile = 'driving-car'
+    profile: OrsProfile = 'driving-car',
+    startLabel?: string,
+    destinationLabel?: string
   ): Observable<RouteResult | null> {
-    const routeName = `${startCoordinates.join(', ')} → ${destinationCoordinates.join(', ')}`;
+    // Falls Labels vorhanden → die nehmen, sonst Koordinaten
+    const routeName = startLabel && destinationLabel
+      ? `${startLabel} → ${destinationLabel}`
+      : `${startCoordinates.join(', ')} → ${destinationCoordinates.join(', ')}`;
 
     return this.directionsFeatureCollection(startCoordinates, destinationCoordinates, profile).pipe(
       map((featureCollection: RouteFeatureCollection | null) => {

@@ -1,40 +1,27 @@
-import { Component, OnInit } from '@angular/core';
-import { RoutesService, RouteRecord } from '../../services/routes.service';
+import { Component, inject } from '@angular/core';
 import { MatListModule } from '@angular/material/list';
+import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { CommonModule } from '@angular/common';
-import {MatButtonModule} from '@angular/material/button';
+import { RouteStore } from '../../services/route-store.service';
+import {SavedRoute} from '../../models/route-result.model';
 
 @Component({
   selector: 'app-saved-routes',
   standalone: true,
+  imports: [MatListModule, MatButtonModule, MatIconModule],
   templateUrl: './saved-routes.component.html',
-  styleUrls: ['./saved-routes.component.scss'],
-  imports: [CommonModule, MatListModule, MatIconModule, MatButtonModule],
+  styleUrls: ['./saved-routes.component.scss']
 })
-export class SavedRoutesComponent implements OnInit {
-  savedRoutes: RouteRecord[] = [];
-  userId = this.getUserId();
+export class SavedRoutesComponent {
+  private routeStore = inject(RouteStore);
 
-  constructor(private routesService: RoutesService) {}
+  savedRoutes = this.routeStore.savedRoutes;
 
-  ngOnInit() { this.load(); }
-
-  load() {
-    this.routesService.list(this.userId).subscribe(routesRecords => this.savedRoutes = routesRecords);
+  displayRoute(route: SavedRoute): string {
+    return `${route.name} (${(route.distanceMeters / 1000).toFixed(1)} km, ${(route.durationSeconds / 60).toFixed(0)} min)`;
   }
 
-  remove(id: string) {
-    this.routesService.delete(id, this.userId).subscribe(() => this.load());
-  }
-
-  displayRoute(routeRecord: RouteRecord): string {
-    return routeRecord.name ?? `${routeRecord.startLat},${routeRecord.startLng} → ${routeRecord.endLat},${routeRecord.endLng}`;
-  }
-
-  private getUserId(): string {
-    let id = localStorage.getItem('wayfinderUserId');
-    if (!id) { id = crypto.randomUUID(); localStorage.setItem('wayfinderUserId', id); }
-    return id;
+  remove(id: string): void {
+    this.routeStore.removeSavedRoute(id);
   }
 }
