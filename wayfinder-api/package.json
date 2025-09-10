@@ -9,6 +9,7 @@
     "test": "cross-env DB_PATH=':memory:' jest --runInBand --coverage"
   },
   "dependencies": {
+    "@mapbox/polyline": "^1.2.1",
     "better-sqlite3": "^9.4.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

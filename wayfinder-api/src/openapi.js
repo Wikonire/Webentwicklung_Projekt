@@ -133,13 +133,58 @@ export const OPENAPI = {
             get: {
                 summary: 'Autocomplete (Proxy zu ORS Pelias, normalisiert)',
                 parameters: [
-                    { name: 'query', in: 'query', required: true, schema: { type: 'string' }, description: 'Suchtext' },
-                    { name: 'size',  in: 'query', schema: { type: 'integer', minimum: 1, maximum: 20, default: 10 } },
-                    { name: 'lang',  in: 'query', schema: { type: 'string' }, description: 'z. B. de, en' },
-                    { name: 'country', in: 'query', schema: { type: 'string' }, description: 'ISO-3 (z. B. CHE)' },
-                    { name: 'lat',   in: 'query', schema: { type: 'number' }, description: 'focus.point.lat' },
-                    { name: 'lon',   in: 'query', schema: { type: 'number' }, description: 'focus.point.lon' },
-                    { name: 'layers',in: 'query', schema: { type: 'string' }, description: 'z. B. locality,region,address' }
+                    {
+                        name: 'query',
+                        in: 'query',
+                        required: true,
+                        schema: { type: 'string', minLength: 1 },
+                        description: 'Suchtext'
+                    },
+                    {
+                        name: 'size',
+                        in: 'query',
+                        schema: { type: 'integer', minimum: 1, maximum: 20, default: 10 }
+                    },
+                    {
+                        name: 'lang',
+                        in: 'query',
+                        schema: { type: 'string', minLength: 2, maxLength: 5, default: 'de' },
+                        description: 'z. B. de, en'
+                    },
+                    {
+                        name: 'country',
+                        in: 'query',
+                        schema: {
+                            type: 'string',
+                            minLength: 3,
+                            maxLength: 3,
+                            pattern: '^[A-Z]{3}$',
+                            example: 'CHE'
+                        },
+                        description: 'ISO-3 (z. B. CHE)'
+                    },
+                    {
+                        name: 'lat',
+                        in: 'query',
+                        schema: { type: 'number', minimum: -90, maximum: 90 },
+                        description: 'focus.point.lat'
+                    },
+                    {
+                        name: 'lon',
+                        in: 'query',
+                        schema: { type: 'number', minimum: -180, maximum: 180 },
+                        description: 'focus.point.lon'
+                    },
+                    {
+                        name: 'layers',
+                        in: 'query',
+                        schema: {
+                            type: 'string',
+                            example: 'address,street,locality',
+                            description: 'Kommagetrennt'
+                        },
+                        description: 'z. B. locality,region,address'
+                    }
                 ],
                 responses: {
                     '200': {
@@ -148,16 +193,20 @@ export const OPENAPI = {
                             'application/json': {
                                 schema: {
                                     type: 'object',
+                                    required: ['features'],
                                     properties: {
-                                        features: { type: 'array', items: { $ref: '#/components/schemas/Suggestion' } }
+                                        features: {
+                                            type: 'array',
+                                            items: { $ref: '#/components/schemas/Suggestion' }
+                                        }
                                     }
                                 },
                                 examples: {
                                     default: {
                                         value: {
                                             features: [
-                                                { label: 'Zürich, CHE', coord: [8.5417, 47.3769] },
-                                                { label: 'Bern, CHE',   coord: [7.4474, 46.9481] }
+                                                { label: 'Zürich, CHE', coord: [8.5417, 47.3769], layer: 'locality' },
+                                                { label: 'Bern, CHE',   coord: [7.4474, 46.9481], layer: 'locality' }
                                             ]
                                         }
                                     }
@@ -171,40 +220,6 @@ export const OPENAPI = {
                 }
             }
         },
-
-        '/ors/geocode': {
-            get: {
-                summary: 'Geocode Search (Proxy zu ORS Pelias, normalisiert)',
-                parameters: [
-                    { name: 'query', in: 'query', required: true, schema: { type: 'string' } },
-                    { name: 'size',  in: 'query', schema: { type: 'integer', minimum: 1, maximum: 20, default: 10 } },
-                    { name: 'lang',  in: 'query', schema: { type: 'string' } },
-                    { name: 'country', in: 'query', schema: { type: 'string' } },
-                    { name: 'lat',   in: 'query', schema: { type: 'number' } },
-                    { name: 'lon',   in: 'query', schema: { type: 'number' } },
-                    { name: 'layers',in: 'query', schema: { type: 'string' } }
-                ],
-                responses: {
-                    '200': {
-                        description: 'OK',
-                        content: {
-                            'application/json': {
-                                schema: {
-                                    type: 'object',
-                                    properties: {
-                                        features: { type: 'array', items: { $ref: '#/components/schemas/Suggestion' } }
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    '400': { description: 'Bad Request', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
-                    '401': { description: 'Unauthorized (Upstream)', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
-                    '429': { description: 'Rate limit',  content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } }
-                }
-            }
-        },
-
         '/ors/directions': {
             post: {
                 summary: 'Directions (Proxy zu ORS)',

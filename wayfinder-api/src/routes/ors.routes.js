@@ -1,11 +1,12 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { autocomplete, geocode, directions } from '../services/ors.service.js';
+import polyline from '@mapbox/polyline';
 
 const router = express.Router();
 router.use(rateLimit({ windowMs: 60_000, max: 120 }));
 
-const toNum = v => (v === undefined ? undefined : Number(v));
+const toNum = (v) => (v === undefined ? undefined : Number(v));
 const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
 
 const allowedProfiles = new Set([
@@ -17,47 +18,35 @@ const allowedProfiles = new Set([
     'cycling-electric',
     'foot-walking',
     'foot-hiking',
-    'wheelchair'
+    'wheelchair',
 ]);
 
-
-/** ---------- helpers: robust label builder + mapper ---------- */
-function buildSuggestionLabel(properties) {
-    if (typeof properties?.label === 'string' && properties.label.trim()) return properties.label;
-    const candidates = [
-        properties?.name,
-        properties?.locality ?? properties?.localadmin ?? properties?.borough ?? properties?.county,
-        properties?.region ?? properties?.state,
-        properties?.country
-    ];
-    const parts = candidates
-        .map(p =>
-            typeof p === 'string' ? p
-                : typeof p === 'number' ? String(p)
-                    : (p && typeof p.label === 'string') ? p.label
-                        : ''
-        )
-        .filter(Boolean);
-    return parts.join(', ');
-}
-
 function mapFeatureToSuggestion(feature) {
-    const lon = Number(feature?.geometry?.coordinates?.[0]);
-    const lat = Number(feature?.geometry?.coordinates?.[1]);
     return {
-        label: buildSuggestionLabel(feature?.properties ?? {}),
-        coord: [lon, lat],
+        id: feature?.properties?.id,
+        label: feature.properties?.label,
+        coord: [
+            Number(feature?.geometry?.coordinates?.[0]),
+            Number(feature?.geometry?.coordinates?.[1]),
+        ],
     };
 }
-/** ------------------------------------------------------------ */
 
+function isLngLat(p) {
+    return Array.isArray(p) && p.length === 2 && !isNaN(Number(p[0])) && !isNaN(Number(p[1]));
+}
+function normalizeLngLat(p) {
+    return [Number(p[0]), Number(p[1])];
+}
+
+/** --------------------------- autocomplete --------------------------- */
 router.get('/autocomplete', async (req, res) => {
     const text = String(req.query.query || '').trim();
     if (!text) return res.status(400).json({ error: 'query erforderlich' });
 
     const queryToOrs = { text };
     const requestedSize = toNum(req.query.size);
-    queryToOrs.size = Number.isFinite(requestedSize) ? clamp(requestedSize, 1, 20) : 10;
+    queryToOrs.size = Number.isFinite(requestedSize) ? clamp(requestedSize, 1, 30) : 20;
 
     if (req.query.lang) queryToOrs.lang = String(req.query.lang);
     if (req.query.country) queryToOrs['boundary.country'] = String(req.query.country);
@@ -72,13 +61,17 @@ router.get('/autocomplete', async (req, res) => {
 
     const upstream = await autocomplete(queryToOrs);
     if (!upstream.ok) {
-        return res.status(upstream.status).json(typeof upstream.data === 'string' ? { error: upstream.data } : (upstream.data || { error: 'Upstream error' }));
+        return res
+            .status(upstream.status)
+            .json(typeof upstream.data === 'string' ? { error: upstream.data } : upstream.data || { error: 'Upstream error' });
     }
+
     const features = Array.isArray(upstream.data?.features) ? upstream.data.features : [];
     const suggestions = features.map(mapFeatureToSuggestion);
-    return res.status(200).json({ features: suggestions });
+    return res.status(200).json({ suggestions });
 });
 
+/** --------------------------- geocode --------------------------- */
 router.get('/geocode', async (req, res) => {
     const text = String(req.query.query || '').trim();
     if (!text) return res.status(400).json({ error: 'query erforderlich' });
@@ -100,41 +93,61 @@ router.get('/geocode', async (req, res) => {
 
     const upstream = await geocode(queryToOrs);
     if (!upstream.ok) {
-        return res.status(upstream.status).json(typeof upstream.data === 'string' ? { error: upstream.data } : (upstream.data || { error: 'Upstream error' }));
+        return res
+            .status(upstream.status)
+            .json(typeof upstream.data === 'string' ? { error: upstream.data } : upstream.data || { error: 'Upstream error' });
     }
+
     const features = Array.isArray(upstream.data?.features) ? upstream.data.features : [];
     const suggestions = features.map(mapFeatureToSuggestion);
-    return res.status(200).json({ features: suggestions });
+    return res.status(200).json({ suggestions });
 });
 
+/** --------------------------- directions --------------------------- */
 router.post('/directions', async (req, res) => {
     const { start, end, profile = 'driving-car' } = req.body || {};
-    const isLngLat = (p) => Array.isArray(p) && p.length === 2 && p.every(Number.isFinite);
-    if (!isLngLat(start) || !isLngLat(end)) return res.status(400).json({ error: 'start/end als [lon,lat]' });
+
+    if (!isLngLat(start) || !isLngLat(end)) {
+        return res.status(400).json({ error: 'start/end müssen [lon,lat] (Zahlen) sein' });
+    }
+
+    const startCoord = normalizeLngLat(start);
+    const endCoord = normalizeLngLat(end);
 
     const effectiveProfile = String(profile);
     if (!allowedProfiles.has(effectiveProfile)) {
-        return res.status(400).json({ error: `profile muss eines von ${Array.from(allowedProfiles).join(', ')} sein` });
+        return res.status(400).json({
+            error: `profile muss eines von ${Array.from(allowedProfiles).join(', ')} sein`,
+        });
     }
 
-    const upstream = await directions(effectiveProfile, start, end);
+    const upstream = await directions(effectiveProfile, startCoord, endCoord);
     if (!upstream.ok) {
-        return res.status(upstream.status).json(typeof upstream.data === 'string' ? { error: upstream.data } : (upstream.data || { error: 'Upstream error' }));
+        return res
+            .status(upstream.status)
+            .json(typeof upstream.data === 'string' ? { error: upstream.data } : upstream.data || { error: 'Upstream error' });
     }
 
     const route = upstream.data?.routes?.[0];
-    if (route?.geometry?.type === 'LineString') {
-        // ✔ Immer FeatureCollection mit summary.{distance,duration} zurückgeben
+    if (route?.geometry && typeof route.geometry === 'string') {
+        // 👉 Polyline → GeoJSON LineString
+        const coords = polyline.decode(route.geometry).map(([lat, lon]) => [lon, lat]);
+
         return res.json({
             type: 'FeatureCollection',
-            features: [{
-                type: 'Feature',
-                properties: {
-                    summary: { distance: route.summary?.distance, duration: route.summary?.duration },
-                    profile: effectiveProfile
+            features: [
+                {
+                    type: 'Feature',
+                    properties: {
+                        summary: route.summary,
+                        profile: effectiveProfile,
+                    },
+                    geometry: {
+                        type: 'LineString',
+                        coordinates: coords,
+                    },
                 },
-                geometry: route.geometry
-            }]
+            ],
         });
     }
 
