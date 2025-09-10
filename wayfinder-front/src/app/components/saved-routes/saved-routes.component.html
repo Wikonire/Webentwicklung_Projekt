@@ -3,13 +3,21 @@
 <mat-list data-testid="saved-routes-list">
   @for (route of savedRoutes(); track route.id) {
     <mat-list-item>
-      <span>{{ displayRoute(route) }}</span>
+      {{ displayRoute(route) }}
       <button
         mat-icon-button
         aria-label="Route löschen"
         (click)="remove(route.id)"
+        [matTooltip]="displayRoute(route) + ' löschen'"
         data-testid="delete-saved-route">
         <mat-icon>delete</mat-icon>
+      </button>
+      <button
+        mat-icon-button
+        [matTooltip]="'Route \'' + displayRoute(route) + '\' auf Karte anzeigen'"
+        (click)="remove(route.id)"
+        data-testid="saved-route-to-map">
+        <mat-icon>map</mat-icon>
       </button>
     </mat-list-item>
   } @empty {
