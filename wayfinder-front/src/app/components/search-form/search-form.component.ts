@@ -47,13 +47,6 @@ function suggestionValidator(control: AbstractControl): ValidationErrors | null 
   return null;
 }
 
-function isValidCoord(coord: [number, number] | undefined): boolean {
-  return Array.isArray(coord)
-    && coord.length === 2
-    && coord[0] >= -180 && coord[0] <= 180
-    && coord[1] >= -90 && coord[1] <= 90;
-}
-
 
 @Component({
   selector: 'app-search-form',
@@ -72,7 +65,7 @@ function isValidCoord(coord: [number, number] | undefined): boolean {
   ],
 })
 export class SearchFormComponent implements OnInit, OnChanges {
-  @Input() selectedRoute: AppRoute | null = null; // <-- Route von außen übergeben
+  @Input() selectedRoute: AppRoute | null = null; //  Route von außen übergeben
 
   @Output() findRoute = new EventEmitter<{
     start: Suggestion;

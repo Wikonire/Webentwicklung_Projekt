@@ -65,7 +65,7 @@ export class OrsService {
   }
 
   /** Forward Geocoding via Proxy: GET /ors/geocode?query=... */
-  geocode(searchText: string, size=1): Observable<Suggestion[]> {
+  geocode(searchText: string): Observable<Suggestion[]> {
     const trimmed = (searchText ?? '').trim();
     if (!trimmed) return of([]);
 
