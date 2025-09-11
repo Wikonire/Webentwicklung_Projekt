@@ -2,8 +2,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { HomeComponent } from './home.component';
 import {provideHttpClientTesting} from '@angular/common/http/testing';
-import {OrsService} from '../../services/ors.service';
-import {of} from 'rxjs';
 import {provideHttpClient, withInterceptorsFromDi} from '@angular/common/http';
 import {MapComponent} from '../../components/map/map.component';
 import {SearchFormComponent} from '../../components/search-form/search-form.component';
@@ -14,17 +12,6 @@ import {MatTabsModule} from '@angular/material/tabs';
 describe('HomeComponent', () => {
   let component: HomeComponent;
   let fixture: ComponentFixture<HomeComponent>;
-
-  const orsServiceMock: jest.Mocked<OrsService> = {
-    autocomplete: jest.fn().mockReturnValue(of({ features: [] })),
-    geocode: jest.fn().mockReturnValue(of({ features: [] })),
-    directionsFeatureCollection: jest.fn().mockReturnValue(of({
-      name: 'dummy',
-      geometry: { type: 'LineString', coordinates: [] },
-      distance: 0,
-      duration: 0,
-    })),
-  };
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
