@@ -21,6 +21,6 @@ app.use('/api', swaggerUi.serve, swaggerUi.setup(OPENAPI));
 app.use('/ors', orsRouter);
 app.use('/routes', routesRouter);
 
-app.use(errorHandler); // letzter Middleware
+app.use(errorHandler);
 
 export default app;
