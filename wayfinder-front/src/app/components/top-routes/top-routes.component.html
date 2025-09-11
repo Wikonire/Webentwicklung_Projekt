@@ -2,7 +2,8 @@
 <mat-list data-testid="top-routes-list">
   @for (route of topRoutes; track route.id) {
     <mat-list-item>
-      <span matListItemTitle>{{ route.start }} → {{ route.destination }} ({{ route.profile }})</span>
+      <span matListItemTitle>{{ route.start }} → {{ route.destination }}<mat-icon [matTooltip]="'Routenart : ' + getProfileLabel(route.profile)" class="route-icon">{{ getProfileIcon(route.profile) }}</mat-icon></span>
+
       <button mat-icon-button matListItemMeta (click)="save(route)">
         <mat-icon>save</mat-icon>
       </button>
