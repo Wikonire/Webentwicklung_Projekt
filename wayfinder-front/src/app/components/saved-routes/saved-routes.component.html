@@ -3,10 +3,10 @@
 <mat-list data-testid="saved-routes-list">
   @for (route of savedRoutes(); track route.id) {
     <mat-list-item>
-      {{ displayRoute(route) }}
+      <span matListItemTitle>{{ displayRoute(route) }} <mat-icon [matTooltip]="'Routenart : ' + getProfileLabel(route.profile)" class="route-icon">{{ getProfileIcon(route.profile) }}</mat-icon></span>
       <button
         mat-icon-button
-        aria-label="Route löschen"
+        matListItemMeta
         (click)="remove(route.id)"
         [matTooltip]="displayRoute(route) + ' löschen'"
         data-testid="delete-saved-route">
@@ -14,8 +14,9 @@
       </button>
       <button
         mat-icon-button
+        matListItemMeta
         [matTooltip]="'Route \'' + displayRoute(route) + '\' auf Karte anzeigen'"
-        (click)="remove(route.id)"
+        (click)="toMap(route.id)"
         data-testid="saved-route-to-map">
         <mat-icon>map</mat-icon>
       </button>
