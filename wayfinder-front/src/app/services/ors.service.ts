@@ -3,55 +3,94 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map, catchError, of } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { RouteFeatureCollection } from '../models/route-feature-collection.model';
-import { RouteResult } from '../models/route-result.model';
-import {OrsProfile} from '../models/ors-profile.model';
-
-export type LngLat = [number, number];
+import { OrsProfile } from '../models/ors-profile.model';
+import { AppRoute, LngLat } from '../models/routes.model';
 
 export interface Suggestion {
-  id: number;
+  id: number | string;
   label: string;
   coord: LngLat;
 }
 
+interface GeocodeResponse {
+  features: Array<{
+    id: string | number;
+    properties?: { label?: string };
+    geometry?: { coordinates?: [number, number] };
+  }>;
+}
+
+interface AutocompleteResponse {
+  suggestions: Suggestion[];
+}
+
+interface DirectionsSummary {
+  distance?: number;
+  duration?: number;
+}
+
+interface DirectionsRoute {
+  geometry: any; // kann Polyline oder GeoJSON LineString sein
+  summary?: DirectionsSummary;
+}
+
+interface DirectionsResponse {
+  type?: string;
+  features?: any[];
+  routes?: DirectionsRoute[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class OrsService {
-  private apiBaseUrl = environment.apiBaseUrl.replace(/\/+$/, '');
+  private readonly apiBaseUrl = environment.apiBaseUrl.replace(/\/+$/, '');
 
-  constructor(private httpClient: HttpClient) {
-  }
+  constructor(private httpClient: HttpClient) {}
 
   /** Autocomplete nach ORS (Proxy: GET /ors/autocomplete?query=...) */
   autocomplete(searchText: string): Observable<Suggestion[]> {
     const trimmed = (searchText ?? '').trim();
     if (!trimmed) return of([]);
+
     const httpParams = new HttpParams().set('query', trimmed);
-    return this.httpClient.get<{
-      suggestions: Suggestion[]
-    }>(`${this.apiBaseUrl}/ors/autocomplete`, {params: httpParams}).pipe(
-      map(response => Array.isArray(response?.suggestions) ? response.suggestions : []),
-      catchError(() => of([]))
-    );
+
+    return this.httpClient
+      .get<AutocompleteResponse>(`${this.apiBaseUrl}/ors/autocomplete`, { params: httpParams })
+      .pipe(
+        map(({ suggestions }) => (Array.isArray(suggestions) ? suggestions : [])),
+        catchError(error => {
+          console.error('Autocomplete error:', error);
+          return of([]);
+        })
+      );
   }
 
+  /** Forward Geocoding via Proxy: GET /ors/geocode?query=... */
+  geocode(searchText: string, size=1): Observable<Suggestion[]> {
+    const trimmed = (searchText ?? '').trim();
+    if (!trimmed) return of([]);
 
-  /** Forward Geocoding via Proxy: GET /ors/geocode?query=...  (optional gleicher Mapper) */
-  geocode(searchText: string): Observable<Suggestion[]> {
-    const httpParams = new HttpParams().set('query', searchText);
-    return this.httpClient.get<any>(`${this.apiBaseUrl}/ors/geocode`, {params: httpParams}).pipe(
-      map((rawResponse: any) => {
-        const features: any[] = rawResponse?.features ?? [];
-        return features.map((feature: any): Suggestion => ({
-          id: feature.id,
-          label: feature?.properties?.label,
-          coord: [
-            feature?.geometry?.coordinates?.[0],
-            feature?.geometry?.coordinates?.[1],
-          ] as LngLat,
-        }));
-      }),
-      catchError(() => of([]))
-    );
+    const httpParams = new HttpParams().set('query', trimmed);
+
+    return this.httpClient
+      .get<GeocodeResponse>(`${this.apiBaseUrl}/ors/geocode`, { params: httpParams })
+      .pipe(
+        map(({ features }) =>
+          (features ?? []).map(
+            (feature): Suggestion => ({
+              id: feature.id,
+              label: feature?.properties?.label ?? 'Unbekannt',
+              coord: [
+                Number(feature?.geometry?.coordinates?.[0]),
+                Number(feature?.geometry?.coordinates?.[1]),
+              ] as LngLat,
+            })
+          )
+        ),
+        catchError(error => {
+          console.error('Geocode error:', error);
+          return of([]);
+        })
+      );
   }
 
   /**
@@ -59,74 +98,115 @@ export class OrsService {
    * POST-Body: { start: [lon,lat], end: [lon,lat], profile: 'driving-car' }
    */
   directionsFeatureCollection(
-    startCoordinates: LngLat,
-    destinationCoordinates: LngLat,
+    start: LngLat,
+    end: LngLat,
     profile: OrsProfile = 'driving-car'
   ): Observable<RouteFeatureCollection | null> {
     return this.httpClient
-      .post<RouteFeatureCollection | any>(`${this.apiBaseUrl}/ors/directions`, {
-        start: startCoordinates,
-        end: destinationCoordinates,
-        profile
-      })
+      .post<DirectionsResponse>(`${this.apiBaseUrl}/ors/directions`, { start, end, profile })
       .pipe(
-        map((rawResponse: any) => {
-          // Falls der Proxy bereits GeoJSON liefert (FeatureCollection)
-          if (rawResponse?.type === 'FeatureCollection') {
-            return rawResponse as RouteFeatureCollection;
+        map(res => {
+          if (res?.type === 'FeatureCollection') {
+            return res as RouteFeatureCollection;
           }
-          // Fallback: altes JSON-Format in FeatureCollection umwandeln (falls nötig)
-          const lineString = rawResponse?.routes?.[0]?.geometry;
-          if (lineString?.type === 'LineString' && Array.isArray(lineString.coordinates)) {
-            const featureCollection: RouteFeatureCollection = {
+
+          const route = res?.routes?.[0];
+          if (route?.geometry) {
+            return {
               type: 'FeatureCollection',
               features: [
                 {
                   type: 'Feature',
-                  geometry: lineString,
-                  properties: {summary: rawResponse?.routes?.[0]?.summary ?? {}}
-                }
-              ]
-            };
-            return featureCollection;
+                  geometry: route.geometry,
+                  properties: { summary: route.summary ?? {} },
+                },
+              ],
+            } as RouteFeatureCollection;
           }
+
           return null;
         }),
-        catchError(() => of(null))
+        catchError(error => {
+          console.error('DirectionsFeatureCollection error:', error);
+          return of(null);
+        })
       );
   }
 
   /**
-   * Komfort-Methode: baut ein fertiges RouteResult (für Store/Map).
+   * Komfort-Methode: baut eine fertige AppRoute (inklusive GeoJSON, Distanz, Dauer).
    */
   directionsAsRouteResult(
-    startCoordinates: LngLat,
-    destinationCoordinates: LngLat,
-    profile: OrsProfile = 'driving-car',
-    startLabel?: string,
-    destinationLabel?: string
-  ): Observable<RouteResult | null> {
-    // Falls Labels vorhanden → die nehmen, sonst Koordinaten
-    const routeName = startLabel && destinationLabel
-      ? `${startLabel} → ${destinationLabel}`
-      : `${startCoordinates.join(', ')} → ${destinationCoordinates.join(', ')}`;
-
-    return this.directionsFeatureCollection(startCoordinates, destinationCoordinates, profile).pipe(
-      map((featureCollection: RouteFeatureCollection | null) => {
-        if (!featureCollection) return null;
-
-        const firstFeature = featureCollection.features?.[0];
-        const distanceMeters = firstFeature?.properties?.summary?.distance ?? 0;
-        const durationSeconds = firstFeature?.properties?.summary?.duration ?? 0;
-
-        const routeResult: RouteResult = {
-          name: routeName,
-          geometry: featureCollection,
-          distanceMeters,
-          durationSeconds
-        };
-        return routeResult;
+    startCoord: LngLat,
+    destinationCoord: LngLat,
+    profile: OrsProfile,
+    startLabel: string,
+    destinationLabel: string
+  ): Observable<AppRoute> {
+    return this.httpClient
+      .post<DirectionsResponse>(`${this.apiBaseUrl}/ors/directions`, {
+        start: startCoord,
+        end: destinationCoord,
+        profile,
       })
-    );
+      .pipe(
+        map(res => {
+          let geometry: RouteFeatureCollection = { type: 'FeatureCollection', features: [] };
+          let distance = 0;
+          let duration = 0;
+
+          if (res?.type === 'FeatureCollection') {
+            geometry = res as RouteFeatureCollection;
+            const summary = res.features?.[0]?.properties?.summary as DirectionsSummary | undefined;
+            if (summary) {
+              distance = summary.distance ?? 0;
+              duration = summary.duration ?? 0;
+            }
+          }
+          else if (Array.isArray(res?.routes) && res.routes[0]) {
+            const route = res.routes[0];
+            geometry = {
+              type: 'FeatureCollection',
+              features: [
+                {
+                  type: 'Feature',
+                  geometry: route.geometry,
+                  properties: { summary: route.summary ?? {} },
+                },
+              ],
+            };
+            distance = route.summary?.distance ?? 0;
+            duration = route.summary?.duration ?? 0;
+          }
+
+          return {
+            id: crypto.randomUUID(),
+            name: `${startLabel} → ${destinationLabel}`,
+            start: startLabel,
+            destination: destinationLabel,
+            profile,
+            startCoord,
+            destinationCoord,
+            geometry,
+            distanceMeters: distance,
+            durationSeconds: duration,
+          } as AppRoute;
+        }),
+        catchError(error => {
+          console.error('DirectionsAsRouteResult error:', error);
+          return of({
+            id: crypto.randomUUID(),
+            name: `${startLabel} → ${destinationLabel}`,
+            start: startLabel,
+            destination: destinationLabel,
+            profile,
+            startCoord,
+            destinationCoord,
+            geometry: { type: 'FeatureCollection', features: [] },
+            distanceMeters: 0,
+            durationSeconds: 0,
+          } as AppRoute);
+        })
+      );
   }
 }
