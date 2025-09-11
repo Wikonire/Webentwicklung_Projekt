@@ -18,20 +18,13 @@
            [matAutocomplete]="autoStart"
            [formControl]="form.controls.start">
     <mat-autocomplete #autoStart="matAutocomplete"
+                      [displayWith]="displaySuggestion"
                       (optionSelected)="handleStartSelected($event)">
-      @for (suggestion of startSuggestions$|async; track suggestion.id) {
-        @if (suggestion) {
-          <mat-option [value]="suggestion">
-            {{ suggestion.label }}
-          </mat-option>
-        } @else {
-          <mat-option [value]="suggestion" disabled>
-            Keine Vorschläge vorhanden
-          </mat-option>
-        }
-
+      @for (suggestion of startSuggestions$ | async; track suggestion.id) {
+        <mat-option [value]="suggestion">
+          {{ suggestion.label }}
+        </mat-option>
       }
-
     </mat-autocomplete>
   </mat-form-field>
 
@@ -42,26 +35,21 @@
            [matAutocomplete]="autoDest"
            [formControl]="form.controls.destination">
     <mat-autocomplete #autoDest="matAutocomplete"
+                      [displayWith]="displaySuggestion"
                       (optionSelected)="handleDestinationSelected($event)">
-      @for (suggestion of destinationSuggestions$|async; track suggestion.id) {
-        @if (suggestion) {
-          <mat-option [value]="suggestion">
-            {{ suggestion.label }}
-          </mat-option>
-        } @else {
-          <mat-option [value]="suggestion" disabled>
-            Keine Vorschläge vorhanden
-          </mat-option>
-        }
-
+      @for (suggestion of destinationSuggestions$ | async; track suggestion.id) {
+        <mat-option [value]="suggestion">
+          {{ suggestion.label }}
+        </mat-option>
       }
     </mat-autocomplete>
   </mat-form-field>
 
-  <button mat-flat-button color="primary" type="submit"
-          [disabled]="!form.controls.start.value || !form.controls.destination.value"
-  (click)="onSubmit()">
+  <button mat-flat-button
+          color="primary"
+          type="submit"
+          [disabled]="!form.controls.start.value || !form.controls.destination.value">
     Route berechnen
   </button>
-  <button mat-button type="button" (click)="onClear()">Leeren</button>
+  <button mat-button type="button" (click)="onClear()">Eingabe leeren</button>
 </form>

@@ -1,18 +1,59 @@
-import { Component, EventEmitter, inject, OnInit, Output } from '@angular/core';
-import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import {
+  Component,
+  EventEmitter,
+  inject,
+  OnInit,
+  Output,
+  Input,
+  OnChanges,
+  SimpleChanges,
+} from '@angular/core';
+import {
+  FormControl,
+  FormGroup,
+  ReactiveFormsModule,
+  AbstractControl,
+  ValidationErrors,
+} from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
-import { MatAutocompleteModule, MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
+import {
+  MatAutocompleteModule,
+  MatAutocompleteSelectedEvent,
+} from '@angular/material/autocomplete';
 import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
-import {debounceTime, distinctUntilChanged, shareReplay, startWith, switchMap, take, tap} from 'rxjs/operators';
-import {Observable, of} from 'rxjs';
+import {
+  debounceTime,
+  distinctUntilChanged,
+  shareReplay,
+  startWith,
+  switchMap,
+} from 'rxjs/operators';
+import { Observable, of } from 'rxjs';
 import { AsyncPipe } from '@angular/common';
 
 import { OrsService, Suggestion } from '../../services/ors.service';
-import { RouteResult } from '../../models/route-result.model';
-import {OrsProfile} from '../../models/ors-profile.model';
+import {OrsProfile, profiles} from '../../models/ors-profile.model';
+import { AppRoute } from '../../models/routes.model';
+
+/** Validator: prüft, ob eine Suggestion mit Koordinaten übergeben ist */
+function suggestionValidator(control: AbstractControl): ValidationErrors | null {
+  const value = control.value as Suggestion | null;
+  if (!value || !Array.isArray(value.coord) || value.coord.length !== 2) {
+    return { invalidSuggestion: true };
+  }
+  return null;
+}
+
+function isValidCoord(coord: [number, number] | undefined): boolean {
+  return Array.isArray(coord)
+    && coord.length === 2
+    && coord[0] >= -180 && coord[0] <= 180
+    && coord[1] >= -90 && coord[1] <= 90;
+}
+
 
 @Component({
   selector: 'app-search-form',
@@ -20,89 +61,127 @@ import {OrsProfile} from '../../models/ors-profile.model';
   templateUrl: './search-form.component.html',
   styleUrls: ['./search-form.component.scss'],
   imports: [
-    ReactiveFormsModule, MatFormFieldModule, MatInputModule, MatButtonModule,
-    MatAutocompleteModule, MatSelectModule, MatIconModule, AsyncPipe
-  ]
+    ReactiveFormsModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatButtonModule,
+    MatAutocompleteModule,
+    MatSelectModule,
+    MatIconModule,
+    AsyncPipe,
+  ],
 })
-export class SearchFormComponent implements OnInit {
-  profiles: Array<{ value: OrsProfile; label: string; icon: string }> = [
-    {value: 'driving-car', label: 'Auto', icon: 'directions_car'},
-    {value: 'driving-hgv', label: 'LKW', icon: 'local_shipping'},
-    {value: 'cycling-regular', label: 'Fahrrad', icon: 'directions_bike'},
-    {value: 'cycling-road', label: 'Rennrad', icon: 'pedal_bike'},
-    {value: 'cycling-mountain', label: 'Mountainbike', icon: 'terrain'},
-    {value: 'cycling-electric', label: 'E-Bike', icon: 'electric_bike'},
-    {value: 'foot-walking', label: 'Zu Fuss', icon: 'directions_walk'},
-    {value: 'foot-hiking', label: 'Wandern', icon: 'hiking'},
-    {value: 'wheelchair', label: 'Rollstuhl', icon: 'accessible'},
-  ];
+export class SearchFormComponent implements OnInit, OnChanges {
+  @Input() selectedRoute: AppRoute | null = null; // <-- Route von außen übergeben
+
   @Output() findRoute = new EventEmitter<{
-    start: Suggestion,
-    destination: Suggestion,
-    profile: OrsProfile
+    start: Suggestion;
+    destination: Suggestion;
+    profile: OrsProfile;
   }>();
+
   private orsService = inject(OrsService);
 
+  profiles = profiles;
+
   form = new FormGroup({
-    start: new FormControl<string>('', {nonNullable: true}),
-    destination: new FormControl<string>('', {nonNullable: true}),
-    profile: new FormControl<OrsProfile>('driving-car', {nonNullable: true})
+    start: new FormControl<string | Suggestion | null>(null, {
+      validators: [suggestionValidator],
+    }),
+    destination: new FormControl<string | Suggestion | null>(null, {
+      validators: [suggestionValidator],
+    }),
+    profile: new FormControl<OrsProfile>('driving-car', { nonNullable: true }),
   });
 
   startSuggestions$!: Observable<Suggestion[]>;
   destinationSuggestions$!: Observable<Suggestion[]>;
 
-  public selectedStartSuggestion: Suggestion | null = null;
-  public selectedDestinationSuggestion: Suggestion | null = null;
-
   ngOnInit(): void {
     this.startSuggestions$ = this.form.controls.start.valueChanges.pipe(
       startWith(this.form.controls.start.value),
       debounceTime(250),
-      distinctUntilChanged(),
-      switchMap(searchText => searchText?.length ? this.orsService.autocomplete(searchText) : of([])),
+      distinctUntilChanged(
+        (a, b) =>
+          (typeof a === 'string' ? a : a?.label) ===
+          (typeof b === 'string' ? b : b?.label)
+      ),
+      switchMap((value) =>
+        typeof value === 'string' && value.length
+          ? this.orsService.autocomplete(value)
+          : of([])
+      ),
       shareReplay(2)
     );
+
     this.destinationSuggestions$ = this.form.controls.destination.valueChanges.pipe(
       startWith(this.form.controls.destination.value),
       debounceTime(250),
-      distinctUntilChanged(),
-      switchMap(searchText => searchText?.length ? this.orsService.autocomplete(searchText) : of([])),
+      distinctUntilChanged(
+        (a, b) =>
+          (typeof a === 'string' ? a : a?.label) ===
+          (typeof b === 'string' ? b : b?.label)
+      ),
+      switchMap((value) =>
+        typeof value === 'string' && value.length
+          ? this.orsService.autocomplete(value)
+          : of([])
+      ),
       shareReplay(2)
     );
   }
 
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['selectedRoute'] && this.selectedRoute) {
+      const route = this.selectedRoute;
+      if (route.startCoord && route.destinationCoord) {
+        this.form.patchValue({
+          start: {
+            id: 'start',
+            label: route.start,
+            coord: route.startCoord,
+          },
+          destination: {
+            id: 'destination',
+            label: route.destination,
+            coord: route.destinationCoord,
+          },
+          profile: route.profile,
+        });
+      }
+    }
+  }
 
   handleStartSelected(event: MatAutocompleteSelectedEvent): void {
-    const chosen = event.option.value as Suggestion;
-    this.selectedStartSuggestion = event.option.value as Suggestion;
-    this.form.controls.start.setValue(chosen.label);
+    this.form.controls.start.setValue(event.option.value as Suggestion);
   }
 
   handleDestinationSelected(event: MatAutocompleteSelectedEvent): void {
-    const chosen = event.option.value as Suggestion;
-    this.selectedDestinationSuggestion = event.option.value as Suggestion;
-    this.form.controls.destination.setValue(chosen.label);
+    this.form.controls.destination.setValue(event.option.value as Suggestion);
+  }
+
+  displaySuggestion(suggestion?: Suggestion): string {
+    return suggestion ? suggestion.label : '';
   }
 
   onClear(): void {
     this.form.reset({
-      start: '',
-      destination: '',
-      profile: 'driving-car'
+      start: null,
+      destination: null,
+      profile: 'driving-car',
     });
-    this.selectedStartSuggestion = null;
-    this.selectedDestinationSuggestion = null;
   }
 
   onSubmit(): void {
-    if (this.selectedStartSuggestion && this.selectedDestinationSuggestion) {
+    const { start, destination, profile } = this.form.value;
+    if (this.form.valid && start && destination) {
       this.findRoute.emit({
-        start: this.selectedStartSuggestion,
-        destination: this.selectedDestinationSuggestion,
-        profile: this.form.controls.profile.value
+        start: start as Suggestion,
+        destination: destination as Suggestion,
+        profile: profile!,
       });
     }
-
   }
+
+
 }
