@@ -8,16 +8,16 @@ import {
   Input,
   ViewChild
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import * as Leaflet from 'leaflet';
 import { RouteFeatureCollection } from '../../models/route-feature-collection.model';
-import { RouteResult } from '../../models/route-result.model';
+import {AppRoute} from '../../models/routes.model';
+import {DecimalPipe} from '@angular/common';
 
 @Component({
   selector: 'app-map',
   standalone: true,
-  imports: [CommonModule, MatCardModule],
+  imports: [MatCardModule, DecimalPipe],
   templateUrl: './map.component.html',
   styleUrls: ['./map.component.scss']
 })
@@ -25,7 +25,7 @@ export class MapComponent implements AfterViewInit {
   // FeatureCollection für Leaflet-Polyline
   geoJsonRouteData = input<RouteFeatureCollection | null>(null);
 
-  @Input() route: RouteResult | null = null;
+  @Input() route: AppRoute | null = null;
 
   @ViewChild('mapContainer', { static: true }) mapContainerRef!: ElementRef<HTMLDivElement>;
 
@@ -36,7 +36,6 @@ export class MapComponent implements AfterViewInit {
     effect(() => {
       const currentGeoJson = this.geoJsonRouteData();
       if (!this.leafletMap) return;
-
       if (currentGeoJson) {
         this.renderRouteOnMap(currentGeoJson);
       } else {

@@ -1,9 +1,9 @@
 <mat-card data-testid="map">
   <mat-card-title>
-    @if (route) {
+    @if (route && route.name && route.distanceMeters && route.durationSeconds) {
       <div><strong>{{ route.name }}</strong></div>
       <div>Distanz: {{ (route.distanceMeters / 1000) | number:'1.1-1' }} km</div>
-      <div>  Dauer:
+      <div>Dauer:
         {{ (route.durationSeconds / 3600) | number:'1.0-0' }} h
         {{ ((route.durationSeconds % 3600) / 60) | number:'1.0-0' }} min</div>
     } @else {
