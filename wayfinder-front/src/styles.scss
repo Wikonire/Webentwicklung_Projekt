@@ -17,3 +17,11 @@ html {
     density: 0
   ));
   }
+.snackbar-info {
+background: #4caf50; // grün
+  color: black;
+  }
+.snackbar-error {
+  background: #f44336; // rot
+  color: white;
+  }
