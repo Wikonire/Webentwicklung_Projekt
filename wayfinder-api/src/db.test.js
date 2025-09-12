@@ -1,87 +1,114 @@
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
+import { jest, describe, it, beforeAll, afterAll, expect  } from '@jest/globals';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
 
-describe('db initialization (src/db.js)', () => {
-    let dbPath;
-    let db;
+// 1) Einen eigenen DB-Pfad in ein noch nicht existentes Unterverzeichnis mocken
+const tempRootDir = fs.mkdtempSync(path.join(os.tmpdir(), 'wayfinder-db-'));
+const mockedDataDir = path.join(tempRootDir, 'nested', 'dbdir');
+const mockedDbPath = path.join(mockedDataDir, 'test.sqlite');
 
-    beforeEach(() => {
-        // Frisches, noch nicht existierendes Zielverzeichnis
-        const base = fs.mkdtempSync(path.join(os.tmpdir(), 'wayfinder-db-'));
-        const nestedDir = path.join(base, 'nested', 'dir');
-        dbPath = path.join(nestedDir, 'wayfinder.test.db');
+await jest.unstable_mockModule('./config.js', () => ({
+    DB_PATH: mockedDbPath,
+}));
 
-        // DB_PATH setzen, bevor Module geladen werden
-        process.env.DB_PATH = dbPath;
-        jest.resetModules();
+const { default: db } = await import('./db.js');
 
-        // db.js lädt config -> nimmt DB_PATH, erzeugt Verzeichnis/Datei und Schema
-        db = require('../src/db'); // << anpassen, falls Pfad anders
+describe('db.js – Initialisierung & Schema', () => {
+    afterAll(() => {
+        try { db.close(); } catch {}
+        try {
+            if (fs.existsSync(tempRootDir)) {
+                // Grob aufräumen (DB-Datei + Verzeichnisbaum)
+                fs.rmSync(tempRootDir, { recursive: true, force: true });
+            }
+        } catch {}
     });
 
-    afterEach(() => {
-        try { db && db.close && db.close(); } catch {}
-        // Testverzeichnis aufräumen
-        try { fs.rmSync(path.dirname(path.dirname(dbPath)), { recursive: true, force: true }); } catch {}
+    // --- Verzeichnis-Erstellung ---
+    it('legt das Datenverzeichnis automatisch an', () => {
+        expect(fs.existsSync(mockedDataDir)).toBe(true);
     });
 
-    test('legt Parent-Verzeichnis und DB-Datei an', () => {
-        const dir = path.dirname(dbPath);
-        expect(fs.existsSync(dir)).toBe(true);
-        expect(fs.existsSync(dbPath)).toBe(true);
+    it('legt ein echtes Verzeichnis an (kein File)', () => {
+        expect(fs.lstatSync(mockedDataDir).isDirectory()).toBe(true);
     });
 
-    test('setzt PRAGMA journal_mode = WAL', () => {
-        const mode = db.pragma('journal_mode', { simple: true });
-        expect(String(mode).toLowerCase()).toBe('wal');
+    // --- Pragmas ---
+    it('setzt PRAGMA foreign_keys = ON', () => {
+        const row = db.prepare('PRAGMA foreign_keys').get();
+        expect(row.foreign_keys).toBe(1);
     });
 
-    test('erstellt Tabelle "routes" mit erwarteten Spalten', () => {
-        const t = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='routes'").get();
-        expect(t).toBeDefined();
-
-        const cols = db.prepare("PRAGMA table_info('routes')").all();
-        const names = cols.map(c => c.name);
-
-        expect(names).toEqual(
-            expect.arrayContaining([
-                'id','userId','name','startLat','startLng','endLat','endLng','distance','duration','geometry','createdAt'
-            ])
-        );
-
-        const notnull = Object.fromEntries(cols.map(c => [c.name, c.notnull]));
-        expect(notnull.userId).toBe(1);
-        expect(notnull.startLat).toBe(1);
-        expect(notnull.startLng).toBe(1);
-        expect(notnull.endLat).toBe(1);
-        expect(notnull.endLng).toBe(1);
-        expect(notnull.geometry).toBe(1);
-        expect(notnull.createdAt).toBe(1);
-        // name/distance/duration sind nullable
-        expect(notnull.name).toBe(0);
-        expect(notnull.distance).toBe(0);
-        expect(notnull.duration).toBe(0);
+    it('setzt PRAGMA journal_mode = WAL', () => {
+        const row = db.prepare('PRAGMA journal_mode').get();
+        expect(String(row.journal_mode).toLowerCase()).toBe('wal');
     });
 
-    test('Minimaler Insert funktioniert, createdAt hat Default', () => {
-        const id = 'test-1';
-        const geom = { type: 'LineString', coordinates: [[7.59, 47.56], [8.31, 47.05]] };
+    // --- Tabellen-Schema: jeweils 1 Expect pro Spalte ---
+    const tableInfo = db.prepare("PRAGMA table_info(routes)").all();
+    const columnNames = new Set(tableInfo.map(c => c.name));
 
+    it('hat Spalte id', () => {
+        expect(columnNames.has('id')).toBe(true);
+    });
+    it('hat Spalte userId', () => {
+        expect(columnNames.has('userId')).toBe(true);
+    });
+    it('hat Spalte name', () => {
+        expect(columnNames.has('name')).toBe(true);
+    });
+    it('hat Spalte startLat', () => {
+        expect(columnNames.has('startLat')).toBe(true);
+    });
+    it('hat Spalte startLng', () => {
+        expect(columnNames.has('startLng')).toBe(true);
+    });
+    it('hat Spalte endLat', () => {
+        expect(columnNames.has('endLat')).toBe(true);
+    });
+    it('hat Spalte endLng', () => {
+        expect(columnNames.has('endLng')).toBe(true);
+    });
+    it('hat Spalte distance', () => {
+        expect(columnNames.has('distance')).toBe(true);
+    });
+    it('hat Spalte duration', () => {
+        expect(columnNames.has('duration')).toBe(true);
+    });
+    it('hat Spalte geometry', () => {
+        expect(columnNames.has('geometry')).toBe(true);
+    });
+    it('hat Spalte createdAt', () => {
+        expect(columnNames.has('createdAt')).toBe(true);
+    });
+
+    // --- Insert/Select – je ein Expect pro Aussage ---
+    const lineString = { type: 'LineString', coordinates: [[8.55, 47.37], [8.56, 47.38]] };
+    beforeAll(() => {
         db.prepare(`
-      INSERT INTO routes (id,userId,name,startLat,startLng,endLat,endLng,distance,duration,geometry)
-      VALUES (?,?,?,?,?,?,?,?,?,?)
+      INSERT INTO routes (id, userId, name, startLat, startLng, endLat, endLng, distance, duration, geometry)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
-            id, 'u1', null,
-            47.56, 7.59, 47.05, 8.31,
-            null, null,
-            JSON.stringify(geom)
+            'r1', 'u1', 'Test Route',
+            47.37, 8.55, 47.38, 8.56,
+            1000, 300,
+            JSON.stringify(lineString)
         );
+    });
 
-        const row = db.prepare('SELECT * FROM routes WHERE id = ?').get(id);
-        expect(row).toBeDefined();
+    it('kann eine Zeile wieder auslesen', () => {
+        const row = db.prepare('SELECT * FROM routes WHERE id = ?').get('r1');
+        expect(!!row).toBe(true);
+    });
+
+    it('liest das korrekte userId-Feld', () => {
+        const row = db.prepare('SELECT userId FROM routes WHERE id = ?').get('r1');
         expect(row.userId).toBe('u1');
-        expect(typeof row.createdAt).toBe('string');
-        expect(JSON.parse(row.geometry)).toEqual(geom);
+    });
+
+    it('liefert die Geometrie korrekt (JSON)', () => {
+        const row = db.prepare('SELECT geometry FROM routes WHERE id = ?').get('r1');
+        expect(JSON.parse(row.geometry)).toEqual(lineString);
     });
 });

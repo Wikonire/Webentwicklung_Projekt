@@ -1,4 +1,4 @@
-const { validateCreateRoute } = require('./routes.validators');
+import {validateCreateRoute} from './routes.validators';
 
 const baseDto = () => ({
     userId: 'u1',

@@ -4,7 +4,7 @@ import fetch from 'node-fetch';
 /**
  * Baut Querystring aus Key/Value-Paaren. Ignoriert null/undefined.
  */
-function toQueryString(params) {
+export function toQueryString(params) {
     const usp = new URLSearchParams();
     for (const [paramName, rawValue] of Object.entries(params || {})) {
         if (rawValue === undefined || rawValue === null) continue;
@@ -16,7 +16,7 @@ function toQueryString(params) {
 /**
  * Liest Response sicher als JSON; fällt auf Text zurück.
  */
-async function readJsonSafe(res) {
+export async function readJsonSafe(res) {
     const text = await res.text();
     try {
         return text ? JSON.parse(text) : null;

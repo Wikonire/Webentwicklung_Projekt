@@ -3,17 +3,17 @@ import rateLimit from 'express-rate-limit';
 import { autocomplete, geocode, directions } from '../services/ors.service.js';
 import polyline from '@mapbox/polyline';
 
-const router = express.Router();
+export const router = express.Router();
 router.use(rateLimit({ windowMs: 60_000, max: 120 }));
 
 /** -------------------- Hilfsfunktionen -------------------- */
-const toNumber = (value) =>
+export const toNumber = (value) =>
     value === undefined ? undefined : Number(value);
 
-const clampNumber = (value, min, max) =>
+export const clampNumber = (value, min, max) =>
     Math.min(max, Math.max(min, value));
 
-const allowedProfiles = new Set([
+export const allowedProfiles = new Set([
     'driving-car',
     'driving-hgv',
     'cycling-regular',
@@ -39,7 +39,7 @@ const allowedLayers = new Set([
     'venue'
 ]);
 
-function mapFeatureToSuggestion(feature) {
+export function mapFeatureToSuggestion(feature) {
     return {
         id: feature?.properties?.id ?? null,
         label: feature?.properties?.label ?? 'Unbekannt',
@@ -50,7 +50,7 @@ function mapFeatureToSuggestion(feature) {
     };
 }
 
-function isLngLat(candidate) {
+export function isLngLat(candidate) {
     return (
         Array.isArray(candidate) &&
         candidate.length === 2 &&
@@ -59,11 +59,11 @@ function isLngLat(candidate) {
     );
 }
 
-function normalizeLngLat(coordPair) {
+export function normalizeLngLat(coordPair) {
     return [Number(coordPair[0]), Number(coordPair[1])];
 }
 
-function prepareQueryToOrs(baseQuery, req, defaultSize = 10, defaultLayers = 'address,street,locality,venue') {
+export function prepareQueryToOrs(baseQuery, req, defaultSize = 10, defaultLayers = 'address,street,locality,venue') {
     // layers prüfen
     if (req.query.layers) {
         const layerError = validateLayers(req.query.layers);
@@ -96,7 +96,7 @@ function prepareQueryToOrs(baseQuery, req, defaultSize = 10, defaultLayers = 'ad
     return baseQuery;
 }
 
-function sendSuggestionResponse(upstreamResponse, res) {
+export function sendSuggestionResponse(upstreamResponse, res) {
     if (!upstreamResponse.ok) {
         console.error('ORS error:', upstreamResponse);
         return res.status(upstreamResponse.status).json(
@@ -115,7 +115,7 @@ function sendSuggestionResponse(upstreamResponse, res) {
 }
 
 /** -------------------- DTO-Validator -------------------- */
-function validateDirectionsDto(body) {
+export function validateDirectionsDto(body) {
     if (!isLngLat(body.start)) return 'start muss [lon,lat] (Zahlen) sein';
     if (!isLngLat(body.end)) return 'end muss [lon,lat] (Zahlen) sein';
     if (!isValidCoord(body.start)) return 'start muss <= -180 und <=180 sein';
@@ -128,7 +128,7 @@ function validateDirectionsDto(body) {
     return null;
 }
 
-function isValidCoord(coord) {
+export function isValidCoord(coord) {
     return Array.isArray(coord)
         && coord.length === 2
         && coord[0] >= -180 && coord[0] <= 180
@@ -140,7 +140,7 @@ function isValidCoord(coord) {
  * @param {string} layersString
  * @returns {string|null}  Fehlertext oder null, wenn gültig
  */
-function validateLayers(layersString) {
+export function validateLayers(layersString) {
     if (typeof layersString !== 'string' || !layersString.trim()) {
         return 'layers muss ein nicht-leerer String sein';
     }
@@ -191,7 +191,8 @@ router.post('/directions', async (req, res) => {
         return res.status(upstreamResponse.status).json(
             typeof upstreamResponse.data === 'string'
                 ? { error: upstreamResponse.data }
-                : upstreamResponse.data || { error: 'Upstream error' }
+                : upstreamResponse.data ||
+                { error: 'Upstream error' }
         );
     }
 

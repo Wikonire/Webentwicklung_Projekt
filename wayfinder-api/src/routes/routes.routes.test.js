@@ -1,19 +1,25 @@
-const express = require('express');
-const request = require('supertest');
+import { jest, describe, test, expect, beforeEach } from '@jest/globals';
+import express from 'express';
+import request from 'supertest';
 
-jest.mock('../../src/repos/routes.repo', () => ({
-    insert: jest.fn(),
-    listByUser: jest.fn(),
-    getOne: jest.fn(),
-    remove: jest.fn(),
+// 1. Mocks vorbereiten
+await jest.unstable_mockModule('../../src/repos/routes.repo.js', () => ({
+    default: {
+        insert: jest.fn(),
+        listByUser: jest.fn(),
+        getOne: jest.fn(),
+        remove: jest.fn(),
+    }
 }));
-jest.mock('../../src/validators/routes.validators', () => ({
+
+await jest.unstable_mockModule('../../src/validators/routes.validators.js', () => ({
     validateCreateRoute: jest.fn(),
 }));
 
-const repo = require('../../src/repos/routes.repo');
-const { validateCreateRoute } = require('../../src/validators/routes.validators');
-const routesRouter = require('../../src/routes/routes.routes');
+// 2. Module nach den Mocks importieren
+const { default: repo } = await import('../../src/repos/routes.repo.js');
+const { validateCreateRoute } = await import('../../src/validators/routes.validators.js');
+const { default: routesRouter } = await import('../../src/routes/routes.routes.js');
 
 const makeApp = () => {
     const app = express();
@@ -138,6 +144,6 @@ describe('routes/routes.routes', () => {
 
         expect(repo.remove).toHaveBeenCalledWith('r1', 'u1');
         expect(res.status).toBe(204);
-        expect(res.text).toBe(''); // kein Body
+        expect(res.text).toBe('');
     });
 });
