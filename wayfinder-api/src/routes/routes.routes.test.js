@@ -2,7 +2,6 @@ import { jest, describe, test, expect, beforeEach } from '@jest/globals';
 import express from 'express';
 import request from 'supertest';
 
-// 1. Mocks vorbereiten
 await jest.unstable_mockModule('../../src/repos/routes.repo.js', () => ({
     default: {
         insert: jest.fn(),
@@ -16,7 +15,6 @@ await jest.unstable_mockModule('../../src/validators/routes.validators.js', () =
     validateCreateRoute: jest.fn(),
 }));
 
-// 2. Module nach den Mocks importieren
 const { default: repo } = await import('../../src/repos/routes.repo.js');
 const { validateCreateRoute } = await import('../../src/validators/routes.validators.js');
 const { default: routesRouter } = await import('../../src/routes/routes.routes.js');
@@ -28,7 +26,7 @@ const makeApp = () => {
     return app;
 };
 
-describe('routes/routes.routes', () => {
+describe('routes/routes.routes (userId immer u1)', () => {
     let app;
 
     beforeEach(() => {
@@ -36,15 +34,14 @@ describe('routes/routes.routes', () => {
         app = makeApp();
     });
 
-    // ---------- POST /routes ----------
     test('POST /routes -> 400 wenn Validierung fehlschlägt', async () => {
-        validateCreateRoute.mockReturnValue('userId fehlt');
+        validateCreateRoute.mockReturnValue('Route unvollständig');
 
         const res = await request(app).post('/routes').send({ name: 'x' });
 
         expect(validateCreateRoute).toHaveBeenCalled();
         expect(res.status).toBe(400);
-        expect(res.body.error).toMatch(/userId fehlt/i);
+        expect(res.body.error).toMatch(/Route unvollständig/i);
         expect(repo.insert).not.toHaveBeenCalled();
     });
 
@@ -60,7 +57,6 @@ describe('routes/routes.routes', () => {
         repo.insert.mockReturnValue(saved);
 
         const payload = {
-            userId: 'u1',
             startLat: 47.56, startLng: 7.59,
             endLat: 47.05, endLng: 8.31,
             geometry: saved.geometry,
@@ -69,42 +65,27 @@ describe('routes/routes.routes', () => {
         const res = await request(app).post('/routes').send(payload);
 
         expect(validateCreateRoute).toHaveBeenCalledWith(expect.objectContaining(payload));
-        expect(repo.insert).toHaveBeenCalledWith(expect.objectContaining(payload));
+        // Router setzt userId=u1 automatisch
+        expect(repo.insert).toHaveBeenCalledWith(expect.objectContaining({ ...payload, userId: 'u1' }));
         expect(res.status).toBe(201);
         expect(res.body).toEqual(saved);
     });
 
-    // ---------- GET /routes ----------
-    test('GET /routes -> 400 wenn userId fehlt', async () => {
-        const res = await request(app).get('/routes');
-        expect(res.status).toBe(400);
-        expect(res.body.error).toMatch(/userId erforderlich/i);
-        expect(repo.listByUser).not.toHaveBeenCalled();
-    });
-
-    test('GET /routes -> 200 + Liste für userId', async () => {
+    test('GET /routes -> 200 + Liste für userId=u1', async () => {
         const rows = [{ id: 'a', userId: 'u1' }, { id: 'b', userId: 'u1' }];
         repo.listByUser.mockReturnValue(rows);
 
-        const res = await request(app).get('/routes').query({ userId: 'u1' });
+        const res = await request(app).get('/routes');
 
         expect(repo.listByUser).toHaveBeenCalledWith('u1');
         expect(res.status).toBe(200);
         expect(res.body).toEqual(rows);
     });
 
-    // ---------- GET /routes/:id ----------
-    test('GET /routes/:id -> 400 wenn userId fehlt', async () => {
-        const res = await request(app).get('/routes/r1');
-        expect(res.status).toBe(400);
-        expect(res.body.error).toMatch(/userId erforderlich/i);
-        expect(repo.getOne).not.toHaveBeenCalled();
-    });
-
-    test('GET /routes/:id -> 404 wenn nicht gefunden/anderer Nutzer', async () => {
+    test('GET /routes/:id -> 404 wenn nicht gefunden', async () => {
         repo.getOne.mockReturnValue(null);
 
-        const res = await request(app).get('/routes/r1').query({ userId: 'u1' });
+        const res = await request(app).get('/routes/r1');
 
         expect(repo.getOne).toHaveBeenCalledWith('r1', 'u1');
         expect(res.status).toBe(404);
@@ -114,24 +95,16 @@ describe('routes/routes.routes', () => {
         const row = { id: 'r1', userId: 'u1' };
         repo.getOne.mockReturnValue(row);
 
-        const res = await request(app).get('/routes/r1').query({ userId: 'u1' });
+        const res = await request(app).get('/routes/r1');
 
         expect(res.status).toBe(200);
         expect(res.body).toEqual(row);
     });
 
-    // ---------- DELETE /routes/:id ----------
-    test('DELETE /routes/:id -> 400 wenn userId fehlt', async () => {
-        const res = await request(app).delete('/routes/r1');
-        expect(res.status).toBe(400);
-        expect(res.body.error).toMatch(/userId erforderlich/i);
-        expect(repo.remove).not.toHaveBeenCalled();
-    });
-
     test('DELETE /routes/:id -> 404 wenn remove=false', async () => {
         repo.remove.mockReturnValue(false);
 
-        const res = await request(app).delete('/routes/r1').query({ userId: 'u1' });
+        const res = await request(app).delete('/routes/r1');
 
         expect(repo.remove).toHaveBeenCalledWith('r1', 'u1');
         expect(res.status).toBe(404);
@@ -140,7 +113,7 @@ describe('routes/routes.routes', () => {
     test('DELETE /routes/:id -> 204 wenn remove=true', async () => {
         repo.remove.mockReturnValue(true);
 
-        const res = await request(app).delete('/routes/r1').query({ userId: 'u1' });
+        const res = await request(app).delete('/routes/r1');
 
         expect(repo.remove).toHaveBeenCalledWith('r1', 'u1');
         expect(res.status).toBe(204);
