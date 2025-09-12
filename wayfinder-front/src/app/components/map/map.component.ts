@@ -63,7 +63,7 @@ export class MapComponent implements AfterViewInit {
   private renderRouteOnMap(routeGeoJson: RouteFeatureCollection): void {
     this.clearRouteLayer();
     this.leafletRouteLayer = Leaflet.geoJSON(routeGeoJson as any, {
-      style: { color: 'blue', weight: 5 }
+      style: { color: '#5f00c0', weight: 5 }
     }).addTo(this.leafletMap!);
 
     const routeBounds = this.leafletRouteLayer.getBounds();
