@@ -7,7 +7,6 @@ import {MatTabsModule} from '@angular/material/tabs';
 import {RouteStore} from '../../services/route-store.service';
 import {OrsProfile} from '../../models/ors-profile.model';
 import {Suggestion} from '../../services/ors.service';
-import {AppRoute} from '../../models/routes.model';
 
 @Component({
   selector: 'app-home',

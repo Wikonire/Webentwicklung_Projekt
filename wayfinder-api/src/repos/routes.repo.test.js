@@ -1,4 +1,4 @@
-import {describe, it, beforeEach, afterEach, expect, jest, test} from '@jest/globals';
+import {describe, beforeEach, afterEach, expect, jest, test} from '@jest/globals';
 import Database from 'better-sqlite3';
 
 let db;

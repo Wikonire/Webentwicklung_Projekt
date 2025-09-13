@@ -2,8 +2,7 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { autocomplete, geocode, directions, sendUpstreamError } from '../services/ors.service.js';
 import polyline from '@mapbox/polyline';
-import {clampNumber, normalizeLngLat, toNumber} from "../validators/shared.validators.js";
-import {validateDirectionsDto} from "../validators/directions.validators.js";
+import {clampNumber, toNumber} from "../validators/shared.validators.js";
 
 export const router = express.Router();
 router.use(rateLimit({ windowMs: 60_000, max: 120 }));

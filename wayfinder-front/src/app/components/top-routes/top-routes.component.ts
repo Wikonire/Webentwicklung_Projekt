@@ -3,8 +3,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import {AppRoute, TopSearchEntry} from '../../models/routes.model';
-import { OrsProfile, profiles } from '../../models/ors-profile.model';
+import {TopSearchEntry} from '../../models/routes.model';
 import {RouteStore} from '../../services/route-store.service';
 import {DisplayRouteService} from '../../services/display-route.service';
 
