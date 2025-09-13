@@ -98,3 +98,16 @@ export async function orsFetch(path, { method = 'GET', query, body } = {}) {
     }
 }
 
+export function sendUpstreamError(upstreamResponse, res) {
+       let errorPayload;
+        if (typeof upstreamResponse.data === 'string') {
+            // z.B.: Plain-Text oder HTML-Fehler, wenn String direkt zurückgeben
+            errorPayload = { error: upstreamResponse.data };
+        } else if (upstreamResponse.data && upstreamResponse.data.error) {
+            errorPayload = upstreamResponse.data;
+        } else {
+            // Fallback
+            errorPayload = { error: 'Upstream error' };
+        }
+        return res.status(upstreamResponse.status).json(errorPayload);
+}

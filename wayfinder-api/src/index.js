@@ -17,7 +17,10 @@ app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.get('/', (_, res) => res.send('Wayfinder API läuft. Swagger: /api'));
 app.get('/healthz', (_, res) => res.json({ ok: true, uptime: process.uptime() }));
 
-app.use('/api', swaggerUi.serve, swaggerUi.setup(OPENAPI));
+const swaggerRouter = express.Router();
+swaggerRouter.use('/', ...swaggerUi.serve, swaggerUi.setup(OPENAPI));
+app.use('/api', swaggerRouter);
+
 app.use('/ors', orsRouter);
 app.use('/routes', routesRouter);
 

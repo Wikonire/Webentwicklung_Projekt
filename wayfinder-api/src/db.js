@@ -3,31 +3,32 @@ import path from 'path';
 import Database from 'better-sqlite3';
 import { DB_PATH } from './config.js';
 
-// Verzeichnis aus DB_PATH ableiten und sicherstellen
+// Verzeichnis aus DB_PATH entnehmen, wenn nicht vorhanden, dann neu erstellen
 const DATA_DIR = path.dirname(DB_PATH);
 if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-// DB öffnen + sinnvolle Pragmas
-const db = new Database(DB_PATH);
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+const db = new Database(DB_PATH); // öffnet oder erstellt DB.
+db.pragma('journal_mode = WAL'); // Aktiviert Write-Ahead Logging siehe: https://sqlite.org/wal.html
 
-// Tabelle anlegen (falls nicht vorhanden)
+// Fremdschlüssel-Constraints sind standardmässig bei SQLite aus
+// wenn user-Tabelle erstellt werden würde, db.pragma('foreign_keys = ON') setzen.
+
+// Tabelle anlegen (falls nicht vorhanden) userId aktuell immer u1
 db.prepare(`
 CREATE TABLE IF NOT EXISTS routes (
-  id TEXT PRIMARY KEY,
-  userId TEXT NOT NULL,
-  name TEXT,
-  startLat REAL NOT NULL,
-  startLng REAL NOT NULL,
-  endLat REAL NOT NULL,
-  endLng REAL NOT NULL,
-  distance INTEGER,
-  duration INTEGER,
-  geometry TEXT NOT NULL,
-  createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+                                      id TEXT PRIMARY KEY,
+                                      userId TEXT NOT NULL,
+                                      startLabel TEXT NOT NULL,
+                                      destinationLabel TEXT NOT NULL,
+                                      startCoord TEXT NOT NULL,        -- JSON-String "[lon, lat]"
+                                      destinationCoord TEXT NOT NULL,  -- JSON-String "[lon, lat]"
+                                      profile TEXT NOT NULL,
+                                      distance REAL,
+                                      duration REAL,
+                                      geometry TEXT,                    -- GeoJSON FeatureCollection
+                                    createdAt TEXT NOT NULL DEFAULT (datetime('now'))
 )`).run();
 
 export default db;

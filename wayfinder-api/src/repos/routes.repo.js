@@ -5,31 +5,59 @@ const uuid = () => crypto.randomUUID();
 
 const insert = (dto) => {
     const id = uuid();
+
     db.prepare(`
-    INSERT INTO routes (id,userId,name,startLat,startLng,endLat,endLng,distance,duration,geometry)
-    VALUES (?,?,?,?,?,?,?,?,?,?)
-  `).run(
-        id, dto.userId, dto.name ?? null,
-        dto.startLat, dto.startLng, dto.endLat, dto.endLng,
-        dto.distance ?? null, dto.duration ?? null,
-        JSON.stringify(dto.geometry)
+        INSERT INTO routes (
+            id,
+            userId,
+            startLabel,
+            destinationLabel,
+            startCoord,
+            destinationCoord,
+            profile,
+            distance,
+            duration,
+            geometry
+        )
+        VALUES (?, ?, ?, ?, json(?), json(?), ?, ?, ?, json(?))
+    `).run(
+        id,
+        dto.userId,
+        dto.startLabel,
+        dto.destinationLabel,
+        JSON.stringify(dto.startCoord),
+        JSON.stringify(dto.destinationCoord),
+        dto.profile,
+        dto.distance ?? null,
+        dto.duration ?? null,
+        dto.geometry ? JSON.stringify(dto.geometry) : null
     );
+
     const row = db.prepare('SELECT * FROM routes WHERE id = ?').get(id);
-    row.geometry = JSON.parse(row.geometry);
+
+    // JSON-Felder zurück in echte Arrays/Objekte
+    row.startCoord = JSON.parse(row.startCoord);
+    row.destinationCoord = JSON.parse(row.destinationCoord);
+    row.geometry = row.geometry ? JSON.parse(row.geometry) : null;
+
     return row;
 };
 
 const listByUser = (userId) => {
-    const rows = db.prepare(
-        'SELECT * FROM routes WHERE userId = ? ORDER BY createdAt DESC'
-    ).all(userId);
-    rows.forEach(r => r.geometry = JSON.parse(r.geometry));
-    return rows;
+    const rows = db.prepare('SELECT * FROM routes WHERE userId = ?').all(userId);
+    return rows.map(r => ({
+        ...r,
+        startCoord: JSON.parse(r.startCoord),
+        destinationCoord: JSON.parse(r.destinationCoord),
+        geometry: r.geometry ? JSON.parse(r.geometry) : null
+    }));
 };
 
 const getOne = (id, userId) => {
     const row = db.prepare('SELECT * FROM routes WHERE id = ? AND userId = ?').get(id, userId);
     if (!row) return null;
+    row.startCoord = JSON.parse(row.startCoord);
+    row.destinationCoord = JSON.parse(row.destinationCoord);
     row.geometry = JSON.parse(row.geometry);
     return row;
 };

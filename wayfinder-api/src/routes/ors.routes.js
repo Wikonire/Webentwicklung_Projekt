@@ -1,18 +1,14 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
-import { autocomplete, geocode, directions } from '../services/ors.service.js';
+import { autocomplete, geocode, directions, sendUpstreamError } from '../services/ors.service.js';
 import polyline from '@mapbox/polyline';
+import {clampNumber, normalizeLngLat, toNumber} from "../validators/shared.validators.js";
+import {validateDirectionsDto} from "../validators/directions.validators.js";
 
 export const router = express.Router();
 router.use(rateLimit({ windowMs: 60_000, max: 120 }));
 
 /** -------------------- Hilfsfunktionen -------------------- */
-export const toNumber = (value) =>
-    value === undefined ? undefined : Number(value);
-
-export const clampNumber = (value, min, max) =>
-    Math.min(max, Math.max(min, value));
-
 export const allowedProfiles = new Set([
     'driving-car',
     'driving-hgv',
@@ -50,19 +46,6 @@ export function mapFeatureToSuggestion(feature) {
     };
 }
 
-export function isLngLat(candidate) {
-    return (
-        Array.isArray(candidate) &&
-        candidate.length === 2 &&
-        Number.isFinite(Number(candidate[0])) &&
-        Number.isFinite(Number(candidate[1]))
-    );
-}
-
-export function normalizeLngLat(coordPair) {
-    return [Number(coordPair[0]), Number(coordPair[1])];
-}
-
 export function prepareQueryToOrs(baseQuery, req, defaultSize = 10, defaultLayers = 'address,street,locality,venue') {
     // layers prüfen
     if (req.query.layers) {
@@ -92,18 +75,12 @@ export function prepareQueryToOrs(baseQuery, req, defaultSize = 10, defaultLayer
         baseQuery['focus.point.lat'] = latitude;
         baseQuery['focus.point.lon'] = longitude;
     }
-
     return baseQuery;
 }
 
 export function sendSuggestionResponse(upstreamResponse, res) {
     if (!upstreamResponse.ok) {
-        console.error('ORS error:', upstreamResponse);
-        return res.status(upstreamResponse.status).json(
-            typeof upstreamResponse.data === 'string'
-                ? { error: upstreamResponse.data }
-                : upstreamResponse.data || { error: 'Upstream error' }
-        );
+        return sendUpstreamError(upstreamResponse, res);
     }
 
     const features = Array.isArray(upstreamResponse.data?.features)
@@ -112,27 +89,6 @@ export function sendSuggestionResponse(upstreamResponse, res) {
 
     const suggestions = features.map(mapFeatureToSuggestion);
     return res.status(200).json({ suggestions });
-}
-
-/** -------------------- DTO-Validator -------------------- */
-export function validateDirectionsDto(body) {
-    if (!isLngLat(body.start)) return 'start muss [lon,lat] (Zahlen) sein';
-    if (!isLngLat(body.end)) return 'end muss [lon,lat] (Zahlen) sein';
-    if (!isValidCoord(body.start)) return 'start muss <= -180 und <=180 sein';
-    if (!isValidCoord(body.end)) return 'end muss <= -180 und <=180 sein';
-    if (!allowedProfiles.has(body.profile)) {
-        return `${body.profile} ist kein gültiges Profil. Gültig: ${Array.from(
-            allowedProfiles
-        ).join(', ')}`;
-    }
-    return null;
-}
-
-export function isValidCoord(coord) {
-    return Array.isArray(coord)
-        && coord.length === 2
-        && coord[0] >= -180 && coord[0] <= 180
-        && coord[1] >= -90 && coord[1] <= 90;
 }
 
 /**
@@ -156,7 +112,6 @@ export function validateLayers(layersString) {
 
 /** --------------------------- Routes --------------------------- */
 
-// Autocomplete
 router.get('/autocomplete', async (req, res) => {
     const queryText = String(req.query.query || '').trim();
     if (!queryText) return res.status(400).json({ error: 'query erforderlich' });
@@ -166,7 +121,6 @@ router.get('/autocomplete', async (req, res) => {
     return sendSuggestionResponse(upstreamResponse, res);
 });
 
-// Geocode
 router.get('/geocode', async (req, res) => {
     const queryText = String(req.query.query || '').trim();
     if (!queryText) return res.status(400).json({ error: 'query erforderlich' });
@@ -184,28 +138,29 @@ router.post('/directions', async (req, res) => {
     const { start, end, profile } = req.body;
     const startCoord = normalizeLngLat(start);
     const endCoord = normalizeLngLat(end);
+
     const upstreamResponse = await directions(profile, startCoord, endCoord);
 
     if (!upstreamResponse.ok) {
-        console.error('Directions error:', upstreamResponse);
-        return res.status(upstreamResponse.status).json(
-            typeof upstreamResponse.data === 'string'
-                ? { error: upstreamResponse.data }
-                : upstreamResponse.data ||
-                { error: 'Upstream error' }
-        );
+        return sendUpstreamError(upstreamResponse, res);
     }
 
     const route = upstreamResponse.data?.routes?.[0];
     if (route?.geometry && typeof route.geometry === 'string') {
         // Polyline → GeoJSON
         const coords = polyline.decode(route.geometry).map(([lat, lon]) => [lon, lat]);
+        const summary = route.summary ?? {};
+
         return res.json({
             type: 'FeatureCollection',
             features: [
                 {
                     type: 'Feature',
-                    properties: { summary: route.summary, profile },
+                    properties: {
+                        profile,
+                        distance: summary.distance ?? 0,
+                        duration: summary.duration ?? 0,
+                    },
                     geometry: { type: 'LineString', coordinates: coords },
                 },
             ],
@@ -213,10 +168,16 @@ router.post('/directions', async (req, res) => {
     }
 
     if (upstreamResponse.data?.type === 'FeatureCollection') {
-        return res.json(upstreamResponse.data);
+        const first = upstreamResponse.data.features?.[0];
+        const summary = first?.properties?.summary ?? {};
+        return res.json({
+            ...upstreamResponse.data,
+            distance: route.summary?.distance ?? null,
+            duration: route.summary?.duration ?? null,
+        });
     }
 
-    return res.json({ type: 'FeatureCollection', features: [] });
+    return res.json({ type: 'FeatureCollection', features: [], distance: 0, duration: 0 });
 });
 
 export default router;

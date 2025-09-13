@@ -1,5 +1,26 @@
 const isProd = process.env.NODE_ENV === 'production';
-
+/**
+ * Express Error Handler Middleware
+ *
+ * @function
+ * @param {Error} err - Das Fehlerobjekt, das von vorherigen Middleware-/Route-Handlern weitergegeben wird
+ * @param {import('express').Request} req - Express Request Objekt
+ * @param {import('express').Response} res - Express Response Objekt
+ * @param {import('express').NextFunction} next - Callback, um zum nächsten Middleware-Handler zu gehen
+ *
+ * @summary
+ * Wandelt interne Fehler in eine einheitliche JSON-Antwort um.
+ * - Unterscheidet zwischen Client-Fehlern (4xx) und Server-Fehlern (5xx).
+ * - Erkennt Syntax- und Timeout-Fehler speziell.
+ * - In Dev/Test werden Details im Response mitgesendet, in Production bleiben sie verborgen.
+ *
+ * @returns {void} Antwortet mit einer JSON-Struktur und beendet die Response.
+ * @throws {Error} Falls die Response bereits gesendet wurde (`res.headersSent`).
+ *
+ * @example
+ * import errorHandler from './middlewares/error-handler.js';
+ * app.use(errorHandler);
+ */
 export default (err, req, res, next) => {
     if (res.headersSent) return next(err);
 

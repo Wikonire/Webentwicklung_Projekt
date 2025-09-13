@@ -15,14 +15,51 @@ await jest.unstable_mockModule('./config.js', () => ({
 const { default: db } = await import('./db.js');
 
 describe('db.js – Initialisierung & Schema', () => {
+
+    // --- Insert/Select – je ein Expect pro Aussage ---
+    const start = [8.55, 47.37]; // [lng, lat]
+    const end = [8.56, 47.38];   // [lng, lat]
+    const id = 'rid1';
+    const lineString = {
+        type: 'LineString',
+        coordinates: [start, end]
+    };
+
+    beforeAll(() => {
+        db.prepare(`
+            INSERT INTO routes (
+                id, userId, startLabel, destinationLabel,
+                startCoord, endCoord, 
+                distance, duration, geometry
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+            id,          // id
+            'u1',            // userId
+            'Test Route Start 1',
+            'Test Route End 1',
+            start[1], // startLat (47.37)
+            start[0], // startLng (8.55)
+            end[1], // endLat   (47.38)
+            end[0], // endLng   (8.56)
+            1000, // distance in Meter
+            300,  // duration in Sekunden
+            JSON.stringify(lineString) //geometry
+        );
+    });
+
     afterAll(() => {
-        try { db.close(); } catch {}
+        try { db.close(); } catch {
+            console.error('db-verbindung geschlossen fehlgeschlagen')
+        }
         try {
             if (fs.existsSync(tempRootDir)) {
-                // Grob aufräumen (DB-Datei + Verzeichnisbaum)
+                // aufräumen (DB-Datei + Verzeichnisse)
                 fs.rmSync(tempRootDir, { recursive: true, force: true });
             }
-        } catch {}
+        } catch {
+            console.error('aufgeräumt fehlgeschlagen')
+        }
     });
 
     // --- Verzeichnis-Erstellung ---
@@ -32,12 +69,6 @@ describe('db.js – Initialisierung & Schema', () => {
 
     it('legt ein echtes Verzeichnis an (kein File)', () => {
         expect(fs.lstatSync(mockedDataDir).isDirectory()).toBe(true);
-    });
-
-    // --- Pragmas ---
-    it('setzt PRAGMA foreign_keys = ON', () => {
-        const row = db.prepare('PRAGMA foreign_keys').get();
-        expect(row.foreign_keys).toBe(1);
     });
 
     it('setzt PRAGMA journal_mode = WAL', () => {
@@ -55,8 +86,11 @@ describe('db.js – Initialisierung & Schema', () => {
     it('hat Spalte userId', () => {
         expect(columnNames.has('userId')).toBe(true);
     });
-    it('hat Spalte name', () => {
-        expect(columnNames.has('name')).toBe(true);
+    it('hat Spalte destinationLabel', () => {
+        expect(columnNames.has('destinationLabel')).toBe(true);
+    });
+    it('hat Spalte startLabel', () => {
+        expect(columnNames.has('startLabel')).toBe(true);
     });
     it('hat Spalte startLat', () => {
         expect(columnNames.has('startLat')).toBe(true);
@@ -83,32 +117,18 @@ describe('db.js – Initialisierung & Schema', () => {
         expect(columnNames.has('createdAt')).toBe(true);
     });
 
-    // --- Insert/Select – je ein Expect pro Aussage ---
-    const lineString = { type: 'LineString', coordinates: [[8.55, 47.37], [8.56, 47.38]] };
-    beforeAll(() => {
-        db.prepare(`
-      INSERT INTO routes (id, userId, name, startLat, startLng, endLat, endLng, distance, duration, geometry)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-            'r1', 'u1', 'Test Route',
-            47.37, 8.55, 47.38, 8.56,
-            1000, 300,
-            JSON.stringify(lineString)
-        );
-    });
-
     it('kann eine Zeile wieder auslesen', () => {
-        const row = db.prepare('SELECT * FROM routes WHERE id = ?').get('r1');
+        const row = db.prepare('SELECT * FROM routes WHERE id = ?').get(id);
         expect(!!row).toBe(true);
     });
 
     it('liest das korrekte userId-Feld', () => {
-        const row = db.prepare('SELECT userId FROM routes WHERE id = ?').get('r1');
+        const row = db.prepare('SELECT userId FROM routes WHERE id = ?').get(id);
         expect(row.userId).toBe('u1');
     });
 
     it('liefert die Geometrie korrekt (JSON)', () => {
-        const row = db.prepare('SELECT geometry FROM routes WHERE id = ?').get('r1');
+        const row = db.prepare('SELECT geometry FROM routes WHERE id = ?').get(id);
         expect(JSON.parse(row.geometry)).toEqual(lineString);
     });
 });
