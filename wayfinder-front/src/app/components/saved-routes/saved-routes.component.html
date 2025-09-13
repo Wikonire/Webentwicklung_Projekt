@@ -1,22 +1,31 @@
 <h2>Gespeicherte Routen</h2>
 
 <mat-list data-testid="saved-routes-list">
-  @for (route of savedRoutes(); track route.id) {
+  @for (route of savedRoutes; track route.id) {
     <mat-list-item>
-      <span matListItemTitle>{{ displayRoute(route) }} <mat-icon [matTooltip]="'Routenart : ' + getProfileLabel(route.profile)" class="route-icon">{{ getProfileIcon(route.profile) }}</mat-icon></span>
+      <span matListItemTitle>
+        {{ displayRouteHelper.displayRoute(route) }}
+        <mat-icon
+          [matTooltip]="'Routenart: ' + getProfileLabel(route.profile)"
+          class="route-icon">
+          {{ getProfileIcon(route.profile) }}
+        </mat-icon>
+      </span>
+
       <button
         mat-icon-button
         matListItemMeta
         (click)="remove(route.id)"
-        [matTooltip]="displayRoute(route) + ' löschen'"
+        [matTooltip]="displayRouteHelper.displayRoute(route) + ' löschen'"
         data-testid="delete-saved-route">
         <mat-icon>delete</mat-icon>
       </button>
+
       <button
         mat-icon-button
         matListItemMeta
-        [matTooltip]="'Route \'' + displayRoute(route) + '\' auf Karte anzeigen'"
-        (click)="toMap(route.id)"
+        [matTooltip]="'Route \'' + displayRouteHelper.displayRoute(route) + '\' auf Karte anzeigen'"
+        (click)="toMap(route.id, route.profile)"
         data-testid="saved-route-to-map">
         <mat-icon>map</mat-icon>
       </button>
