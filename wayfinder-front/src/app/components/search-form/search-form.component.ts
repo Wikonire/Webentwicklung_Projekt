@@ -65,7 +65,7 @@ function suggestionValidator(control: AbstractControl): ValidationErrors | null 
   ],
 })
 export class SearchFormComponent implements OnInit, OnChanges {
-  @Input() selectedRoute: AppRoute | null = null; //  Route von außen übergeben
+  @Input() selectedRoute: AppRoute | null = null;
 
   @Output() findRoute = new EventEmitter<{
     start: Suggestion;
@@ -131,12 +131,12 @@ export class SearchFormComponent implements OnInit, OnChanges {
         this.form.patchValue({
           start: {
             id: 'start',
-            label: route.start,
+            label: route.startLabel,
             coord: route.startCoord,
           },
           destination: {
             id: 'destination',
-            label: route.destination,
+            label: route.destinationLabel,
             coord: route.destinationCoord,
           },
           profile: route.profile,
@@ -168,6 +168,7 @@ export class SearchFormComponent implements OnInit, OnChanges {
   onSubmit(): void {
     const { start, destination, profile } = this.form.value;
     if (this.form.valid && start && destination) {
+      console.log(this.form.value)
       this.findRoute.emit({
         start: start as Suggestion,
         destination: destination as Suggestion,

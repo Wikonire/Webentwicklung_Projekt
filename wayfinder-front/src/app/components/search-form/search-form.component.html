@@ -48,7 +48,7 @@
   <button mat-flat-button
           color="primary"
           type="submit"
-          [disabled]="!form.controls.start.value || !form.controls.destination.value">
+          [disabled]="!form.controls.start.value || !form.controls.destination.value || form.invalid">
     Route berechnen
   </button>
   <button mat-button type="button" (click)="onClear()">Eingabe leeren</button>
