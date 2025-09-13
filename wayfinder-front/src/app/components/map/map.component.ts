@@ -2,7 +2,7 @@ import {
   AfterViewInit,
   Component,
   effect,
-  ElementRef,
+  ElementRef, inject,
   Injector,
   input,
   Input,
@@ -13,17 +13,20 @@ import * as Leaflet from 'leaflet';
 import { RouteFeatureCollection } from '../../models/route-feature-collection.model';
 import {AppRoute} from '../../models/routes.model';
 import {DecimalPipe} from '@angular/common';
+import {DisplayRouteService} from '../../services/display-route.service';
+import {MatIconModule} from '@angular/material/icon';
 
 @Component({
   selector: 'app-map',
   standalone: true,
-  imports: [MatCardModule, DecimalPipe],
+  imports: [MatCardModule, DecimalPipe, MatIconModule],
   templateUrl: './map.component.html',
   styleUrls: ['./map.component.scss']
 })
 export class MapComponent implements AfterViewInit {
   // FeatureCollection für Leaflet-Polyline
   geoJsonRouteData = input<RouteFeatureCollection | null>(null);
+  displayHelper = inject(DisplayRouteService);
 
   @Input() route: AppRoute | null = null;
 

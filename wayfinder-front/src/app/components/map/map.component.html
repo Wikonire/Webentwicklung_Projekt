@@ -1,15 +1,28 @@
 <mat-card data-testid="map">
-  <mat-card-title>
-    @if (route && route.name && route.distanceMeters && route.durationSeconds) {
-      <div><strong>{{ route.name }}</strong></div>
-      <div>Distanz: {{ (route.distanceMeters / 1000) | number:'1.1-1' }} km</div>
-      <div>Dauer:
-        {{ (route.durationSeconds / 3600) | number:'1.0-0' }} h
-        {{ ((route.durationSeconds % 3600) / 60) | number:'1.0-0' }} min</div>
-    } @else {
-      Gib ein Start- und Zielort ein um die Route anzuzeigen
-    }
-  </mat-card-title>
+  <mat-card-header>
+    <mat-card-title>
+      @if (route && route.startLabel && route.destinationLabel) {
+        <strong>{{ displayHelper.displayRoute(route) }}</strong>
+      } @else {
+        Gib ein Start- und Zielort ein um die Route anzuzeigen
+      }
+      @if (route && route.distance && route.duration) {
+
+        <mat-card-subtitle>
+          <div>Dauer:
+            {{ (route.duration / 3600) | number:'1.0-0' }} h
+            {{ ((route.duration % 3600) / 60) | number:'1.0-0' }} min
+          </div>
+          <div>Distanz: {{ (route.distance / 1000) | number:'1.1-1' }} km</div>
+          <div>Per: <mat-icon>{{displayHelper.getProfileIcon(route.profile)}}</mat-icon>
+            {{displayHelper.getProfileLabel(route.profile)}}
+          </div>
+        </mat-card-subtitle>
+      }
+    </mat-card-title>
+
+  </mat-card-header>
+
   <mat-card-content>
     <div #mapContainer data-testid="route-polyline" id="map"></div>
   </mat-card-content>
