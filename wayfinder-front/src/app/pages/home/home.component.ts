@@ -7,6 +7,7 @@ import {MatTabsModule} from '@angular/material/tabs';
 import {RouteStore} from '../../services/route-store.service';
 import {OrsProfile} from '../../models/ors-profile.model';
 import {Suggestion} from '../../services/ors.service';
+import {AppRoute} from '../../models/routes.model';
 
 @Component({
   selector: 'app-home',
@@ -15,9 +16,7 @@ import {Suggestion} from '../../services/ors.service';
   imports: [SearchFormComponent, MapComponent, TopRoutesComponent, SavedRoutesComponent, MatTabsModule]
 })
 export class HomeComponent {
-  public routeStore = inject(RouteStore);
-  public currentGeoJson = this.routeStore.routeGeoJson;
-
+  routeStore = inject(RouteStore);
 
   findRoute($event: { start: Suggestion; destination: Suggestion; profile: OrsProfile }) {
       this.routeStore.computeRoute(
@@ -30,8 +29,7 @@ export class HomeComponent {
 
   }
 
-  onShowSavedRoute(routeId: string): void {
-    this.routeStore.loadSavedRoute(routeId);
-    this.routeStore.topSearches()
+  onShowSavedRoute($event:{id: string, profile:OrsProfile}) {
+    this.routeStore.loadSavedRoute($event.id);
   }
 }
