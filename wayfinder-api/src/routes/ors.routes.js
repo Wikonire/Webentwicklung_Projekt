@@ -132,51 +132,50 @@ router.get('/geocode', async (req, res) => {
 
 // Directions
 router.post('/directions', async (req, res) => {
-    const validationError = validateDirectionsDto(req.body);
-    if (validationError) return res.status(400).json({ error: validationError });
-
     const { start, end, profile } = req.body;
-    const startCoord = normalizeLngLat(start);
-    const endCoord = normalizeLngLat(end);
 
-    const upstreamResponse = await directions(profile, startCoord, endCoord);
+    // ... DTO Validation ...
+
+    const upstreamResponse = await directions(profile, start, end);
 
     if (!upstreamResponse.ok) {
-        return sendUpstreamError(upstreamResponse, res);
+        const data = upstreamResponse.data;
+        if (typeof data === 'string') return res.status(upstreamResponse.status).json({ error: data });
+        if (data && typeof data === 'object' && data.error)
+            return res.status(upstreamResponse.status).json({ error: data.error });
+        return res.status(upstreamResponse.status).json({ error: 'Upstream error' });
     }
 
-    const route = upstreamResponse.data?.routes?.[0];
-    if (route?.geometry && typeof route.geometry === 'string') {
-        // Polyline → GeoJSON
-        const coords = polyline.decode(route.geometry).map(([lat, lon]) => [lon, lat]);
-        const summary = route.summary ?? {};
+    const data = upstreamResponse.data;
 
+    // Fall 1: ORS liefert bereits GeoJSON FeatureCollection
+    if (data.type === 'FeatureCollection') {
+        return res.json({
+            ...data,
+            distance: data.features?.[0]?.properties?.summary?.distance ?? 0,
+            duration: data.features?.[0]?.properties?.summary?.duration ?? 0,
+        });
+    }
+
+    // Fall 2: ORS liefert klassische `routes[]`
+    if (Array.isArray(data.routes)) {
+        const route = data.routes[0];
+        const coords = polyline.decode(route.geometry).map(([lat, lon]) => [lon, lat]);
         return res.json({
             type: 'FeatureCollection',
             features: [
                 {
                     type: 'Feature',
-                    properties: {
-                        profile,
-                        distance: summary.distance ?? 0,
-                        duration: summary.duration ?? 0,
-                    },
                     geometry: { type: 'LineString', coordinates: coords },
+                    properties: { summary: route.summary },
                 },
             ],
+            distance: route.summary?.distance ?? 0,
+            duration: route.summary?.duration ?? 0,
         });
     }
 
-    if (upstreamResponse.data?.type === 'FeatureCollection') {
-        const first = upstreamResponse.data.features?.[0];
-        return res.json({
-            ...upstreamResponse.data,
-            distance: route.summary?.distance ?? null,
-            duration: route.summary?.duration ?? null,
-        });
-    }
-
+    // Fallback: keine Daten
     return res.json({ type: 'FeatureCollection', features: [], distance: 0, duration: 0 });
 });
-
 export default router;

@@ -12,7 +12,6 @@ router.post('/', async (req, res) => {
     const { startCoord, destinationCoord, startLabel, destinationLabel, profile } = req.body;
     const err = validateCreateRoute(req.body);
     if (err) {
-        console.error('Fehler beim Erstellen der Route', err);
         return res.status(400).json({ error: err });
     }
 
@@ -21,7 +20,6 @@ router.post('/', async (req, res) => {
         const upstreamResponse = await directions(profile, startCoord, destinationCoord);
 
         if (!upstreamResponse.ok) {
-            console.error('ORS Directions Fehler', upstreamResponse.data?.error);
             return res.status(upstreamResponse.status).json({
                 error: upstreamResponse.data?.error?.message || 'Fehler bei ORS Directions',
                 code: upstreamResponse.data?.error?.code
@@ -45,7 +43,6 @@ router.post('/', async (req, res) => {
         const row = repo.insert(payload);
         return res.status(201).json(row);
     } catch (error) {
-        console.error('Interner Fehler beim Erstellen der Route', error);
         return res.status(500).json({ error: 'Interner Fehler beim Speichern der Route' });
     }
 });
