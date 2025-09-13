@@ -1,8 +1,7 @@
-import { jest, describe, it, expect, beforeEach } from '@jest/globals';
+import { jest, describe, it, expect, beforeEach, test } from '@jest/globals';
 
 const fetchMock = jest.fn();
 
-// Mocks vor Import definieren
 await jest.unstable_mockModule('node-fetch', () => ({ default: fetchMock }));
 
 await jest.unstable_mockModule('../config.js', () => ({
@@ -10,7 +9,6 @@ await jest.unstable_mockModule('../config.js', () => ({
     ORS_API_KEY: 'mock-key',
 }));
 
-// Import der getesteten Module erst danach
 const {
     toQueryString,
     readJsonSafe,
@@ -18,6 +16,7 @@ const {
     geocode,
     orsFetch,
     directions,
+    sendUpstreamError,
 } = await import('./ors.service.js');
 
 describe('ors.service', () => {
@@ -70,20 +69,17 @@ describe('ors.service', () => {
         });
 
         it('gibt 500 zurück wenn ORS_API_KEY fehlt', async () => {
-            jest.resetModules(); // Modulcache leeren
+            jest.resetModules();
 
-            // Config ohne Key mocken
             await jest.unstable_mockModule('../config.js', () => ({
                 ORS_BASE: 'https://mock.ors/',
-                ORS_API_KEY: undefined,   // kein API-Key
+                ORS_API_KEY: undefined,
             }));
 
-            // node-fetch muss auch gemockt sein, wird aber in diesem Fall gar nicht aufgerufen
             await jest.unstable_mockModule('node-fetch', () => ({
                 default: jest.fn(),
             }));
 
-            // Modul frisch importieren → zieht neue Config
             const { orsFetch: orsFetchNoKey } = await import('./ors.service.js');
 
             const result = await orsFetchNoKey('/any');
@@ -92,11 +88,7 @@ describe('ors.service', () => {
             expect(result.status).toBe(500);
             expect(result.data).toBe('Missing ORS_API_KEY');
         });
-
-
     });
-
-
 
     describe('Wrapper', () => {
         it('autocomplete ruft fetch mit Parametern auf', async () => {
@@ -142,6 +134,49 @@ describe('ors.service', () => {
                 coordinates: [[8.5, 47.3], [8.6, 47.4]],
                 instructions: false,
             }));
+        });
+    });
+
+    describe('sendUpstreamError', () => {
+        let res;
+
+        beforeEach(() => {
+            res = {
+                status: jest.fn().mockReturnThis(),
+                json: jest.fn().mockReturnThis(),
+            };
+        });
+
+        test('gibt String-Fehler zurück', () => {
+            const upstreamResponse = { status: 500, data: 'kaputt' };
+            sendUpstreamError(upstreamResponse, res);
+
+            expect(res.status).toHaveBeenCalledWith(500);
+            expect(res.json).toHaveBeenCalledWith({ error: 'kaputt' });
+        });
+
+        test('gibt error-Objekt direkt zurück', () => {
+            const upstreamResponse = { status: 502, data: { error: 'bad request', code: 123 } };
+            sendUpstreamError(upstreamResponse, res);
+
+            expect(res.status).toHaveBeenCalledWith(502);
+            expect(res.json).toHaveBeenCalledWith({ error: 'bad request', code: 123 });
+        });
+
+        test('nutzt Fallback wenn data null ist', () => {
+            const upstreamResponse = { status: 503, data: null };
+            sendUpstreamError(upstreamResponse, res);
+
+            expect(res.status).toHaveBeenCalledWith(503);
+            expect(res.json).toHaveBeenCalledWith({ error: 'Upstream error' });
+        });
+
+        test('nutzt Fallback wenn data Objekt ohne error ist', () => {
+            const upstreamResponse = { status: 504, data: { foo: 'bar' } };
+            sendUpstreamError(upstreamResponse, res);
+
+            expect(res.status).toHaveBeenCalledWith(504);
+            expect(res.json).toHaveBeenCalledWith({ error: 'Upstream error' });
         });
     });
 });

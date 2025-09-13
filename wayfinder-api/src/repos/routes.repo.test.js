@@ -1,4 +1,4 @@
-import { describe, it, beforeEach, afterEach, expect, jest } from '@jest/globals';
+import {describe, it, beforeEach, afterEach, expect, jest, test} from '@jest/globals';
 import Database from 'better-sqlite3';
 
 let db;
@@ -10,14 +10,14 @@ await jest.unstable_mockModule('../db.js', () => {
         CREATE TABLE routes (
                                 id TEXT PRIMARY KEY,
                                 userId TEXT NOT NULL,
-                                name TEXT,
-                                startLat REAL NOT NULL,
-                                startLng REAL NOT NULL,
-                                endLat REAL NOT NULL,
-                                endLng REAL NOT NULL,
+                                startLabel TEXT,
+                                destinationLabel TEXT,
+                                startCoord TEXT NOT NULL,
+                                destinationCoord TEXT NOT NULL,
+                                profile TEXT,
                                 distance INTEGER,
                                 duration INTEGER,
-                                geometry TEXT NOT NULL,
+                                geometry TEXT,
                                 createdAt TEXT NOT NULL DEFAULT (datetime('now'))
         )
     `).run();
@@ -36,25 +36,29 @@ afterEach(() => {
 });
 
 describe('routes.repo (mit In-Memory DB)', () => {
-    const dto = {
-        userId: 'u1',
-        name: 'Test Route',
+    const coords ={
         startLat: 47.37,
         startLng: 8.55,
         endLat: 47.38,
         endLng: 8.56,
+    }
+    const dto = {
+        userId: 'u1',
+        name: 'Test Route',
+        startCoord: [coords.startLat, coords.startLng],
+        destinationCoord: [coords.endLat, coords.endLng],
         distance: 1000,
         duration: 300,
         geometry: { type: 'LineString', coordinates: [[8.55, 47.37], [8.56, 47.38]] },
     };
 
-    it('insert() fügt Route ein und gibt sie zurück', () => {
+    test('insert() fügt Route ein und gibt sie zurück', () => {
         const row = routesRepo.insert(dto);
         expect(row.userId).toBe('u1');
         expect(row.geometry).toEqual(dto.geometry);
     });
 
-    it('listByUser() liefert alle Routen für userId', () => {
+    test('listByUser() liefert alle Routen für userId', () => {
         const r1 = routesRepo.insert(dto);
         const r2 = routesRepo.insert({ ...dto, name: 'Route 2' });
 
@@ -63,13 +67,13 @@ describe('routes.repo (mit In-Memory DB)', () => {
         expect(list.map(r => r.id)).toEqual(expect.arrayContaining([r1.id, r2.id]));
     });
 
-    it('getOne() liefert Route bei id + userId', () => {
+    test('getOne() liefert Route bei id + userId', () => {
         const r1 = routesRepo.insert(dto);
         const row = routesRepo.getOne(r1.id, 'u1');
         expect(row.id).toBe(r1.id);
     });
 
-    it('remove() löscht Route und gibt true zurück', () => {
+    test('remove() löscht Route und gibt true zurück', () => {
         const r1 = routesRepo.insert(dto);
         const ok = routesRepo.remove(r1.id, 'u1');
         expect(ok).toBe(true);

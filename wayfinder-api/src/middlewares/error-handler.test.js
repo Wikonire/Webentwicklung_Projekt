@@ -1,100 +1,133 @@
-import { describe, it, beforeEach, afterEach, expect, jest } from '@jest/globals';
-import Database from 'better-sqlite3';
+// error-handler.test.js
+import errorHandler from './error-handler.js';
+import {jest} from "@jest/globals";
 
-let db;
-await jest.unstable_mockModule('../db.js', () => {
-    db = new Database(':memory:');
-    db.prepare(`
-    CREATE TABLE routes (
-      id TEXT PRIMARY KEY,
-      userId TEXT NOT NULL,
-      name TEXT,
-      startLat REAL NOT NULL,
-      startLng REAL NOT NULL,
-      endLat REAL NOT NULL,
-      endLng REAL NOT NULL,
-      distance INTEGER,
-      duration INTEGER,
-      geometry TEXT NOT NULL,
-      createdAt TEXT NOT NULL DEFAULT (datetime('now'))
-    )
-  `).run();
-    return { default: db };
-});
+describe('errorHandler', () => {
+    let mockReq;
+    let mockRes;
+    let mockNext;
 
-// jetzt wird das Repo mit der gemockten DB geladen
-const { default: routesRepo } = await import('../repos/routes.repo.js');
-
-beforeEach(() => {
-    db.prepare('DELETE FROM routes').run(); // DB leeren
-});
-
-afterEach(() => {
-    // keine Inserts zwischen Tests liegen lassen
-});
-
-describe('routesRepo (mit In-Memory DB)', () => {
-    const dto = {
-        userId: 'u1',
-        name: 'Test Route',
-        startLat: 47.37,
-        startLng: 8.55,
-        endLat: 47.38,
-        endLng: 8.56,
-        distance: 1000,
-        duration: 300,
-        geometry: { type: 'LineString', coordinates: [[8.55, 47.37], [8.56, 47.38]] },
-    };
-
-    it('insert() should insert a route and return it with parsed geometry', () => {
-        const row = routesRepo.insert(dto);
-        expect(row.userId).toBe('u1');
-        expect(row.name).toBe('Test Route');
-        expect(row.geometry).toEqual(dto.geometry);
+    beforeEach(() => {
+        mockReq = {};
+        mockRes = {
+            headersSent: false,
+            status: jest.fn().mockReturnThis(),
+            json: jest.fn().mockReturnThis(),
+        };
+        mockNext = jest.fn();
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+        process.env.NODE_ENV = 'development';
     });
 
-    it('listByUser() should return all routes for a user', () => {
-        const r1 = routesRepo.insert(dto);
-        const r2 = routesRepo.insert({ ...dto, name: 'Second Route' });
-
-        const list = routesRepo.listByUser('u1');
-        expect(list.length).toBe(2);
-        // robust: enthält beide, Reihenfolge egal
-        expect(list.map(r => r.id)).toEqual(expect.arrayContaining([r1.id, r2.id]));
+    afterEach(() => {
+        jest.resetAllMocks();
     });
 
-    it('listByUser() should return [] if no routes for userId', () => {
-        const list = routesRepo.listByUser('no-user');
-        expect(list).toEqual([]);
+    describe('wenn Response bereits gesendet wurde', () => {
+        test('ruft next mit dem Fehler auf', () => {
+            mockRes.headersSent = true;
+            const testError = new Error('already sent');
+            errorHandler(testError, mockReq, mockRes, mockNext);
+            expect(mockNext).toHaveBeenCalledWith(testError);
+        });
     });
 
-    it('getOne() should return route if id + userId match', () => {
-        const r1 = routesRepo.insert(dto);
-        const row = routesRepo.getOne(r1.id, 'u1');
-        expect(row).not.toBeNull();
-        expect(row.id).toBe(r1.id);
+    describe('Logging Verhalten', () => {
+        test('loggt Fehler in development', () => {
+            const testError = new Error('log me');
+            errorHandler(testError, mockReq, mockRes, mockNext);
+            expect(console.error).toHaveBeenCalledWith(testError);
+        });
+
+        test('loggt Fehler nicht in test', () => {
+            process.env.NODE_ENV = 'test';
+            const testError = new Error('dont log me');
+            errorHandler(testError, mockReq, mockRes, mockNext);
+            expect(console.error).not.toHaveBeenCalled();
+        });
     });
 
-    it('getOne() should return null if id not found', () => {
-        const row = routesRepo.getOne('no-id', 'u1');
-        expect(row).toBeNull();
+    describe('Syntaxfehler / entity.parse.failed', () => {
+        test('gibt 400 mit Invalid JSON body zurück bei SyntaxError', () => {
+            const syntaxError = new SyntaxError('invalid');
+            errorHandler(syntaxError, mockReq, mockRes, mockNext);
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Invalid JSON body' });
+        });
+
+        test('gibt 400 mit Invalid JSON body zurück bei entity.parse.failed', () => {
+            const parseError = { type: 'entity.parse.failed' };
+            errorHandler(parseError, mockReq, mockRes, mockNext);
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Invalid JSON body' });
+        });
     });
 
-    it('getOne() should return null if userId does not match', () => {
-        const r1 = routesRepo.insert(dto);
-        const row = routesRepo.getOne(r1.id, 'other-user');
-        expect(row).toBeNull();
+    describe('Statuscode Handling', () => {
+        test('setzt Status auf err.status', () => {
+            const err = { status: 404, message: 'not found' };
+            errorHandler(err, mockReq, mockRes, mockNext);
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+        });
+
+        test('fällt zurück auf 500 wenn ungültiger Status', () => {
+            const err = { status: 9999, message: 'invalid' };
+            errorHandler(err, mockReq, mockRes, mockNext);
+            expect(mockRes.status).toHaveBeenCalledWith(500);
+        });
     });
 
-    it('remove() should remove route and return true', () => {
-        const r1 = routesRepo.insert(dto);
-        const result = routesRepo.remove(r1.id, 'u1');
-        expect(result).toBe(true);
-        expect(routesRepo.getOne(r1.id, 'u1')).toBeNull();
+    describe('Timeout/Abort Handling', () => {
+        test('setzt Status 504 bei Timeout im Namen', () => {
+            const err = { name: 'TimeoutError', message: 'timed out' };
+            errorHandler(err, mockReq, mockRes, mockNext);
+            expect(mockRes.status).toHaveBeenCalledWith(504);
+        });
+
+        test('setzt Status 504 bei Abort im Namen', () => {
+            const err = { name: 'AbortError', message: 'aborted' };
+            errorHandler(err, mockReq, mockRes, mockNext);
+            expect(mockRes.status).toHaveBeenCalledWith(504);
+        });
     });
 
-    it('remove() should return false if route not found', () => {
-        const result = routesRepo.remove('no-id', 'u1');
-        expect(result).toBe(false);
+    describe('Payload Struktur', () => {
+        test('setzt error auf "Server error" bei 500', () => {
+            const err = { status: 500, message: 'server kaputt' };
+            errorHandler(err, mockReq, mockRes, mockNext);
+            const [payload] = mockRes.json.mock.calls[0];
+            expect(payload.error).toBe('Server error');
+        });
+
+        test('setzt error auf "Request error" bei 400', () => {
+            const err = { status: 400, message: 'bad req' };
+            errorHandler(err, mockReq, mockRes, mockNext);
+            const [payload] = mockRes.json.mock.calls[0];
+            expect(payload.error).toBe('Request error');
+        });
+
+        test('fügt detail hinzu wenn nicht production', () => {
+            const err = { status: 400, message: 'bad req' };
+            errorHandler(err, mockReq, mockRes, mockNext);
+            const [payload] = mockRes.json.mock.calls[0];
+            expect(payload.detail).toBe('bad req');
+        });
+
+        test('entfernt detail in production', async () => {
+            process.env.NODE_ENV = 'production';
+            jest.resetModules(); // Modulcache leeren
+            const { default: errorHandlerProd } = await import('./error-handler.js');
+
+            const mockReq = {};
+            const mockRes = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+            const mockNext = jest.fn();
+
+            const err = { status: 400, message: 'bad req' };
+            errorHandlerProd(err, mockReq, mockRes, mockNext);
+
+            const [payload] = mockRes.json.mock.calls[0];
+            expect(payload.detail).toBeUndefined();
+        });
+
     });
 });
