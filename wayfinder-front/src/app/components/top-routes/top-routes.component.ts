@@ -1,11 +1,12 @@
-import {Component, Input, inject} from '@angular/core';
-import {MatListModule} from '@angular/material/list';
-import {MatButtonModule} from '@angular/material/button';
+import { Component, Input, inject } from '@angular/core';
+import { MatListModule } from '@angular/material/list';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import {AppRoute, TopSearchEntry} from '../../models/routes.model';
+import { OrsProfile, profiles } from '../../models/ors-profile.model';
 import {RouteStore} from '../../services/route-store.service';
-import {MatIconModule} from '@angular/material/icon';
-import {TopSearchEntry} from '../../models/routes.model';
-import {OrsProfile, profiles} from '../../models/ors-profile.model';
-import {MatTooltipModule} from '@angular/material/tooltip';
+import {DisplayRouteService} from '../../services/display-route.service';
 
 @Component({
   selector: 'app-top-routes',
@@ -16,19 +17,16 @@ import {MatTooltipModule} from '@angular/material/tooltip';
 })
 export class TopRoutesComponent {
   @Input() topRoutes: TopSearchEntry[] = [];
+  private storeService = inject(RouteStore);
+  displayHelper = inject(DisplayRouteService);
 
-  /** Icon zum Profil finden */
-  getProfileIcon(profile: OrsProfile): string {
-    return profiles.find(p => p.value === profile)?.icon ?? 'help_outline';
-  }
-
-  getProfileLabel(profile: OrsProfile): string {
-    return profiles.find(p => p.value === profile)?.label ?? 'help_outline';
-  }
-  private routeStore = inject(RouteStore);
-  profiles = profiles;
 
   save(entry: TopSearchEntry): void {
-    this.routeStore.saveFromTopSearch(entry);
+    if (!entry.startCoord || !entry.destinationCoord) return;
+    this.storeService.saveFromTopSearch(entry);
+  }
+
+  clear() {
+    this.storeService.clearTopSearches()
   }
 }

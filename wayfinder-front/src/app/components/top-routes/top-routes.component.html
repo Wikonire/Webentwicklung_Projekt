@@ -2,13 +2,21 @@
 <mat-list data-testid="top-routes-list">
   @for (route of topRoutes; track route.id) {
     <mat-list-item>
-      <span matListItemTitle>{{ route.start }} → {{ route.destination }}<mat-icon [matTooltip]="'Routenart : ' + getProfileLabel(route.profile)" class="route-icon">{{ getProfileIcon(route.profile) }}</mat-icon></span>
+      <span matListItemTitle>
+        {{ displayHelper.displayRoute(route) }}
+        <mat-icon [matTooltip]="'Routenart : ' + displayHelper.getProfileLabel(route.profile)"
+                  class="route-icon">{{ displayHelper.getProfileIcon(route.profile) }}
+        </mat-icon></span>
 
-      <button mat-icon-button matListItemMeta (click)="save(route)">
+      <button mat-icon-button matListItemMeta
+              (click)="save(route)"
+              [matTooltip]="'Speichern ' + displayHelper.displayRoute(route)">
         <mat-icon>save</mat-icon>
       </button>
     </mat-list-item>
   } @empty {
-    <mat-list-item>Bisher keine Suchanfragen getätigt</mat-list-item>
+    <mat-list-item>Historie ist leer</mat-list-item>
   }
+  <button matButton (click)="clear()">Liste leeren</button>
 </mat-list>
+
