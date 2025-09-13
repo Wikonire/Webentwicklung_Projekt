@@ -1,8 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { OrsService, Suggestion, LngLat } from './ors.service';
+import { OrsService, Suggestion } from './ors.service';
 import { OrsProfile } from '../models/ors-profile.model';
 import {provideHttpClient, withInterceptorsFromDi} from '@angular/common/http';
+import {LngLat} from '../models/routes.model';
 
 describe('OrsService', () => {
   let orsService: OrsService;

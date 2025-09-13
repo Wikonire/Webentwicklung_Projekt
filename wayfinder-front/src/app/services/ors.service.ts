@@ -30,7 +30,7 @@ interface DirectionsSummary {
 }
 
 interface DirectionsRoute {
-  geometry: any; // kann Polyline oder GeoJSON LineString sein
+  geometry: any; //  Polyline oder GeoJSON LineString
   summary?: DirectionsSummary;
 }
 
@@ -94,6 +94,55 @@ export class OrsService {
   }
 
   /**
+   * Komfort-Methode: baut eine fertige AppRoute (inklusive GeoJSON, Distanz, Dauer).
+   */
+  directionsAsRouteResult(
+    startCoord: LngLat,
+    destinationCoord: LngLat,
+    profile: OrsProfile,
+    startLabel: string,
+    destinationLabel: string
+  ): Observable<AppRoute> {
+    return this.httpClient
+      .post<DirectionsResponse>(`${this.apiBaseUrl}/ors/directions`, {
+        start: startCoord,
+        end: destinationCoord,
+        profile,
+      })
+      .pipe(
+        map(res => {
+          let geometry: RouteFeatureCollection = { type: 'FeatureCollection', features: [] };
+          let distance = 0;
+          let duration = 0;
+
+          if (res?.type === 'FeatureCollection') {
+            geometry = res as RouteFeatureCollection;
+
+            const summary = geometry.features?.[0]?.properties?.summary;
+            if (summary) {
+              distance = summary.distance ?? 0;
+              duration = summary.duration ?? 0;
+            }
+          }
+
+          return {
+            id: crypto.randomUUID(),
+            startLabel,
+            destinationLabel,
+            profile,
+            startCoord,
+            destinationCoord,
+            geometry,
+            distance,
+            duration,
+          } as AppRoute;
+        })
+      );
+  }
+
+
+
+  /**
    * Directions als FeatureCollection.
    * POST-Body: { start: [lon,lat], end: [lon,lat], profile: 'driving-car' }
    */
@@ -129,83 +178,6 @@ export class OrsService {
         catchError(error => {
           console.error('DirectionsFeatureCollection error:', error);
           return of(null);
-        })
-      );
-  }
-
-  /**
-   * Komfort-Methode: baut eine fertige AppRoute (inklusive GeoJSON, Distanz, Dauer).
-   */
-  directionsAsRouteResult(
-    startCoord: LngLat,
-    destinationCoord: LngLat,
-    profile: OrsProfile,
-    startLabel: string,
-    destinationLabel: string
-  ): Observable<AppRoute> {
-    return this.httpClient
-      .post<DirectionsResponse>(`${this.apiBaseUrl}/ors/directions`, {
-        start: startCoord,
-        end: destinationCoord,
-        profile,
-      })
-      .pipe(
-        map(res => {
-          let geometry: RouteFeatureCollection = { type: 'FeatureCollection', features: [] };
-          let distance = 0;
-          let duration = 0;
-
-          if (res?.type === 'FeatureCollection') {
-            geometry = res as RouteFeatureCollection;
-            const summary = res.features?.[0]?.properties?.summary as DirectionsSummary | undefined;
-            if (summary) {
-              distance = summary.distance ?? 0;
-              duration = summary.duration ?? 0;
-            }
-          }
-          else if (Array.isArray(res?.routes) && res.routes[0]) {
-            const route = res.routes[0];
-            geometry = {
-              type: 'FeatureCollection',
-              features: [
-                {
-                  type: 'Feature',
-                  geometry: route.geometry,
-                  properties: { summary: route.summary ?? {} },
-                },
-              ],
-            };
-            distance = route.summary?.distance ?? 0;
-            duration = route.summary?.duration ?? 0;
-          }
-
-          return {
-            id: crypto.randomUUID(),
-            name: `${startLabel} → ${destinationLabel}`,
-            start: startLabel,
-            destination: destinationLabel,
-            profile,
-            startCoord,
-            destinationCoord,
-            geometry,
-            distanceMeters: distance,
-            durationSeconds: duration,
-          } as AppRoute;
-        }),
-        catchError(error => {
-          console.error('DirectionsAsRouteResult error:', error);
-          return of({
-            id: crypto.randomUUID(),
-            name: `${startLabel} → ${destinationLabel}`,
-            start: startLabel,
-            destination: destinationLabel,
-            profile,
-            startCoord,
-            destinationCoord,
-            geometry: { type: 'FeatureCollection', features: [] },
-            distanceMeters: 0,
-            durationSeconds: 0,
-          } as AppRoute);
         })
       );
   }
