@@ -169,7 +169,6 @@ router.post('/directions', async (req, res) => {
 
     if (upstreamResponse.data?.type === 'FeatureCollection') {
         const first = upstreamResponse.data.features?.[0];
-        const summary = first?.properties?.summary ?? {};
         return res.json({
             ...upstreamResponse.data,
             distance: route.summary?.distance ?? null,
