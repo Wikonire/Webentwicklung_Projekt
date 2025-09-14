@@ -1,196 +1,213 @@
-# Webentwicklungsprojekt Wayfinder
+# Wayfinder – Webapplikation zur Routenberechnung
 
-* wayfinder-front → Angular SPA (UI, Routing, Top10 etc.)
-* wayfinder-api → REST-API mit Swagger, DB-Speicherung
+## Übersicht
+
+Dieses Projekt wurde im Rahmen des Moduls *Web-Engineering* entwickelt.
+Ziel ist die Umsetzung einer **Single Page Application (SPA)**, die zwei Orte aufnimmt, eine Route berechnet und visualisiert.
+Zusätzlich werden die **Top-10 meistgesuchten Routen** gespeichert und angezeigt.
+
+Die Lösung besteht aus zwei getrennten Teilprojekten:
+
+* **wayfinder-front:** Angular SPA (UI, Suche, Routenanzeige, Top-10)
+* **wayfinder-api:** REST-API (NestJS + Prisma, Swagger, DB-Speicherung)
+
+---
+
+## Projektstruktur
+
+```
+├── README.md           <-- Gesamtprojekt (Intro, Setup, Abgabehinweise)
+├── wayfinder-front/    <-- Angular SPA (Frontend)
+│   └── src/
+└── wayfinder-api/      <-- REST-API + DB
+    └── src/
+```
+
+Vorteile: klare Trennung von Frontend und Backend, CI/CD-tauglich
+
+---
+
 ## Quickstart (lokal)
 
 ### Voraussetzungen
-- Node.js ≥ 20, npm ≥ 10
-- Angular CLI (`npm i -g @angular/cli`)
-- (optional) Docker für DB
 
-## 🔧 Quickstart (lokal)
-
-### Voraussetzungen
-- Node.js ≥ 20, npm ≥ 10
-- Angular CLI (`npm i -g @angular/cli`)
-- (optional) Docker für DB
+* Node.js ≥ 20, npm ≥ 10
+* Angular CLI (`npm i -g @angular/cli`)
+* Optional: Docker für PostgreSQL
 
 ### Frontend starten
+
 ```bash
- cd wayfinder-front
- npm ci
- ng serve # läuft auf http://localhost:4200
+cd wayfinder-front
+npm ci
+ng serve   # läuft auf http://localhost:4200
 ```
 
+### Backend starten
 
-
-## Projektstruktur
-Der für den Aufbau des Repositorys ist hier dargestellt. Dies wird regelmässig während der Projektumsetzung, wenn nötig angepasst.
-
-```
-├── .gitignore        <-- Root: nur generische Regeln (IDE, OS, tmp)
-├── README.md         <-- Gesamtprojekt (Intro, Struktur, Abgabehinweise)
-
-wayfinder-front/      <-- Angular SPA (Frontend)
-│   ├── .gitignore    
-│   ├── angular.json
-│   ├── package.json
-│   ├── package-lock.json
-│   ├── tsconfig.json
-│   ├── README.md     <-- nur Frontend-Doku (Setup, Befehle, etc.)
-│   └── src/
-
-wayfinder-api/        <-- REST API (z. B. Node/Nest/Express, DB)
-│   ├── .gitignore   
-│   ├── package.json
-│   ├── package-lock.json
-│   ├── README.md    (Swagger, Endpoints, Tests)
-│   └── src/
+```bash
+cd wayfinder-api
+npm ci
+npm run start:dev   # läuft auf http://localhost:3000
 ```
 
-
-
-### Vorteile dieser Struktur sind: 
-- Klar getrennte Teilprojekte
-- CI/CD-ready
+---
 
 ## Technologien
-- Frontend
-    - Framework: Angular 20
-    - UI-Komponenten: Angular Material
-    - Sprache: TypeScript
-    - Styles: SCSS
-    - Testing:
-        - Unit-Tests: Jest
-        - Akzeptanztests (E2E): Playwright
 
-- Backend
-    - Runtime/Framework: Node.js 20 + NestJS
-    - Sprache: TypeScript
-    - REST-API: NestJS Controllers/Services
-    - API-Dokumentation: @nestjs/swagger (OpenAPI/Swagger UI)
-    - Datenbank: PostgreSQL (Produktion) / SQLite (lokal)
-    - ORM: Prisma
-    - Security: class-validator + ValidationPipe, helmet, cors, throttling
-    - Testing:
-        - Unit-Tests: Jest
-        - Integration/E2E-Tests: Supertest
-    - Deployment: Docker, GitHub Actions
+### Frontend
 
+* Angular 20 + Angular Material
+* TypeScript, SCSS
+* Leaflet/MapLibre für Karten
+* Tests: Jest (Unit), Playwright (E2E)
 
-## Planungs‑Checkliste
+### Backend
 
-### Projekt & Repos
-- [X] Repo-Struktur steht: `wayfinder-front/` (SPA) + `wayfinder-api/` (REST+DB)
-- [X] `.gitignore` je Teilprojekt (node_modules, dist, coverage, .env, .idea)
-- [X] Root-README mit Struktur, Startanleitung, Technologien
+* Node.js 20 + NestJS
+* Prisma ORM, PostgreSQL (Produktion), SQLite (Entwicklung/Test)
+* Swagger (OpenAPI 3.0)
+* Sicherheit: ValidationPipe, class-validator, helmet, cors, throttling
+* Tests: Jest (Unit), Supertest (Integration)
+---
+
+## Funktionalität
+
+### Frontend
+
+* Eingabe von Start- und Zielort
+* Autocomplete mit ORS `geocode/autocomplete`
+* Routenberechnung mit ORS `v2/directions`
+* Karte mit Route und Markern für Start/Ziel
+* Top-10 Suchanfragen (localStorage)
+* Favoriten speichern über API
+* Responsives und barrierearmes Design
+
+### Backend
+
+* REST-API (mindestens Richardson Maturity Level 2)
+* CRUD-Endpunkte für gespeicherte Routen
+* Proxy zu ORS-Endpunkten (API-Key nur serverseitig)
+* Schutz vor SQL Injection durch ORM und Validierung
+* Dokumentation mit Swagger UI
 
 ---
 
-### Frontend (Angular 20 + Material + SCSS)
-#### UI & Funktionalität
-- [X] UI-Skelett: Header, Suchbereich, Kartenbereich, „Top 10 Routen“
-- [X] Form: Startort + Zielort + „Route berechnen“-Button
-- [ ] Autocomplete (OpenRouteService `geocode/autocomplete`)
-- [ ] Geocoding (ORS `geocode/search`) → Koordinaten ermitteln
-- [ ] Routenberechnung (ORS `v2/directions`) → GeoJSON/Polyline
-- [ ] Karte rendern (Leaflet/MapLibre) + Route + Marker Start/Ziel
-- [ ] „Top 10 meistgesuchte Routen“ (localStorage, sortiert, klickbar)
-- [ ] Error-Handling/Toasts (z.B. Angular Material Snackbar)
-- [ ] Loading-States (Spinner/Progress)
+## API-Dokumentation
 
-#### Architektur & Qualität
-- [X] Komponenten: `SearchComponent`, `RouteResultComponent`, `TopRoutesComponent`, `MapComponent`
-- [ ] Services: `OrsService` (API-Aufrufe), `TopRoutesService` (localStorage)
-- [ ] Environment: API-Base-URL, Feature-Flags, ORS‑Proxy‑Pfad
-- [ ] Accessibility: Labels, ARIA, Tastaturnavigation, Kontraste
-- [ ] Responsives Layout (Mobile first)
+Swagger-UI: [http://localhost:3000/api](http://localhost:3000/api)
+Health Check: [http://localhost:3000/healthz](http://localhost:3000/healthz)
 
-#### Tests (Frontend)
-- [ ] **Unit (Jest)**: Services (Mocks), Komponenten (Inputs/Outputs, Rendering)
-- [X] **Akzeptanz/E2E (Playwright)**:
-    - [ ] „Berlin → Hamburg“ ergibt Route
-    - [ ] Autocomplete zeigt Vorschläge
-    - [ ] Top‑10 wird aktualisiert und anklickbar wiederverwendbar
-- [ ] Coverage-Report (mind. Richtwert z.B. 80%)
+### Wichtige Endpunkte
 
----
+* `GET /ors/autocomplete` – Autocomplete
+* `GET /ors/geocode` – Geocoding
+* `POST /ors/directions` – Route berechnen
+* `POST /routes` – Route speichern
+* `GET /routes` – Routenliste
+* `GET /routes/{id}` – Route abrufen
+* `DELETE /routes/{id}` – Route löschen
 
-#### REST‑API + DB (NestJS + Prisma + PostgreSQL)
-### Endpunkte (RML2)
-- [ ] `POST /routes` – Route speichern (DTO-Validierung)
-- [ ] `GET /routes` – Liste mit Paging/Filter
-- [ ] `GET /routes/:id` – Details
-- [ ] `DELETE /routes/:id` – löschen
-- [ ] (Optional) `PUT /routes/:id` – bearbeiten
-- [ ] ORS‑Proxy:
-    - [ ] `GET /ors/autocomplete?q=...`
-    - [ ] `GET /ors/geocode?q=...`
-    - [ ] `POST /ors/directions` (Body: Start/Ziel)  
-      (→ API‑Key **nur** serverseitig nutzen)
+### Beispielantworten
 
-#### Datenbank & Schema
-- [ ] Prisma Schema (Route mit Geometrie/GeoJSON, Distanz, Dauer, Timestamps)
-- [ ] Migrationen erstellt & dokumentiert
-- [ ] Seed/Dev‑Daten (optional)
-- [ ] DB‑User mit minimalen Rechten (Prod)
+Autocomplete:
 
-#### Sicherheit & Qualität
-- [ ] **ValidationPipe** (whitelist + forbidNonWhitelisted)
-- [ ] **class-validator** DTOs (z. B. `@IsLatitude`, `@IsLongitude`, `@IsString`)
-- [ ] **Prisma/ORM** (keine Raw‑SQL ohne Bindings) → Schutz vor SQL Injection
-- [ ] **helmet**, **CORS**, **Rate Limiting** (throttler)
-- [ ] Fehler-/Exception-Filter, Logging
+```json
+{
+  "suggestions": [
+    { "label": "Zürich, CHE", "coord": [8.5417, 47.3769] },
+    { "label": "Bern, CHE", "coord": [7.4474, 46.9481] }
+  ]
+}
+```
 
-#### Doku & Tests (Backend)
-- [ ] Swagger via `@nestjs/swagger` + Swagger UI erreichbar
-- [ ] **Unit (Jest)**: Services, Mapper, Validatoren
-- [ ] **Integration/E2E (Jest + Supertest)**: Routen‑CRUD, ORS‑Proxy
-- [ ] `.env.example` vorhanden (keine Secrets im Repo)
+Directions:
+
+```json
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [[8.5417, 47.3769], [7.4474, 46.9481]]
+      },
+      "properties": { "summary": { "distance": 121000, "duration": 4800 } }
+    }
+  ]
+}
+```
 
 ---
 
-### Gemeinsame Anforderungen aus Aufgabe
-- [ ] SPA lädt & zeigt Route (Karte, Linie, Marker)
-- [ ] Autocomplete funktioniert mit ORS
-- [ ] Top‑10 meistgesuchte Routen lokal gespeichert & angezeigt
-- [ ] REST‑API speichert persönliche Routen in DB
-- [ ] **Swagger** dokumentiert API (min. RML2)
-- [ ] **Akzeptanztests automatisiert** (Playwright)
-- [ ] **Unit-Tests** für eigenen Code (Front & Back)
-- [ ] **SQL Injection** wirksam verhindert (ORM + Validation)
+## Tests
+
+### Frontend
+
+* Unit-Tests mit Jest (Services, Komponenten)
+* Akzeptanz/E2E-Tests mit Playwright (Autocomplete, Route Berlin–Hamburg, Top-10) (nicht beendet)
+
+### Backend
+
+* Unit-Tests mit Jest (Validatoren, Services)
+* Integrationstests mit Supertest (CRUD-Endpunkte, ORS-Proxy)
+
 
 ---
 
-### CI/CD & Deployment
-- [ ] GitHub Actions Workflow(s):
-    - [ ] Frontend: `npm ci`, Lint, **Jest**, **Playwright** (headless), Build
-    - [ ] Backend: `npm ci`, Lint, **Jest/Supertest**, Prisma Migrate (CI‑DB), Build
-- [ ] Artefakt-/Coverage-Uploads (optional)
-- [ ] Hosting Frontend (GitHub Pages/Netlify/Vercel – statisch)
-- [ ] Hosting Backend (Render/Fly.io/Heroku Alternative/Docker auf Server)
-- [ ] Env‑Vars in CI gesetzt (ORS_API_KEY, DB_URL)
-- [ ] (Optional) Dockerfiles + docker-compose (API + Postgres)
+## Planungs-Checkliste
+
+### Frontend
+
+* [x] UI-Skelett (Suchfeld, Karte, Top-10)
+* [ ] Autocomplete eingebaut
+* [ ] Route berechnen und Karte rendern
+* [ ] Top-10 speichern und darstellen
+
+### Backend
+
+* [x] Setup NestJS + Prisma
+* [ ] Routen-CRUD-Endpunkte
+* [ ] ORS-Proxy
+* [ ] Swagger-Dokumentation
+* [ ] Tests für Services und Endpunkte
+
+### Deployment
+
+* [ ] CI/CD mit GitHub Actions
+* [ ] Docker Compose für API + DB
 
 ---
 
-### Qualität & Doku
-- [ ] Root‑README: Projektziel, Struktur, Startanleitung, Technologien, Bewertungsbezug
-- [ ] Frontend‑README: Setup, Befehle, Test‑Commands, env‑Hinweise
-- [ ] API‑README: Endpunkte, Swagger‑Link, DB‑Setup, Test‑Commands
-- [ ] Screenshots/GIFs (kurze Demo im README)
-- [ ] Lizenz/Impressum (falls gefordert)
+## Bewertungskriterien
+
+### Frontend
+
+* Funktionalität (10 Punkte)
+* Code-Verständlichkeit (10 Punkte)
+* Tests (10 Punkte)
+* Klassen/Selektoren (5 Punkte)
+* Mobile/Accessibility (5 Punkte)
+
+### Backend
+
+* Funktionalität (10 Punkte)
+* Tests (10 Punkte)
+* SQL Injection Schutz (10 Punkte)
+* Swagger Dokumentation (5 Punkte)
+* RESTfulness (5 Punkte)
+
+Formel: `(erreichte Punkte / total mögliche Punkte) * 5 + 1`
 
 ---
 
-### Abnahme‑Kriterien (DoD)
-- [ ] Nutzer kann Start/Ziel eingeben → Route erscheint auf Karte
-- [ ] Autocomplete schlägt Adressen vor
-- [ ] Top‑10 Liste zeigt meistgesuchte Routen und ist klickbar
-- [ ] Route kann per REST gespeichert & gelesen werden
-- [ ] Alle Tests grün (Unit + Akzeptanz/E2E)
-- [ ] Swagger vollständig & erreichbar
-- [ ] SQL Injection Schutz nachweisbar (Code + kurze Doku)
-- [ ] Build & Deploy automatisiert
+## Abnahmekriterien
+
+* Route wird korrekt auf Karte angezeigt
+* Autocomplete schlägt Adressen vor
+* Top-10-Liste ist klickbar und wiederverwendbar
+* Routen können über API gespeichert und gelesen werden
+* Swagger ist erreichbar und vollständig
+* Alle Tests laufen erfolgreich
+* SQL Injection Schutz ist implementiert
 
