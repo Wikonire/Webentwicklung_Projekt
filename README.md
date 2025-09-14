@@ -160,22 +160,20 @@ Directions:
 ### Frontend
 
 * [x] UI-Skelett (Suchfeld, Karte, Top-10)
-* [ ] Autocomplete eingebaut
-* [ ] Route berechnen und Karte rendern
-* [ ] Top-10 speichern und darstellen
+* [x] Autocomplete eingebaut
+* [x] Route berechnen und Karte rendern
+* [x] Top-10 speichern und darstellen
 
 ### Backend
 
 * [x] Setup NestJS + Prisma
-* [ ] Routen-CRUD-Endpunkte
-* [ ] ORS-Proxy
-* [ ] Swagger-Dokumentation
-* [ ] Tests für Services und Endpunkte
+* [x] Routen-CRUD-Endpunkte
+* [x] ORS-Proxy
+* [x] Swagger-Dokumentation
+* [x] Tests für Services und Endpunkte
 
 ### Deployment
-
-* [ ] CI/CD mit GitHub Actions
-* [ ] Docker Compose für API + DB
+Kein Deployment
 
 ---
 
@@ -183,21 +181,20 @@ Directions:
 
 ### Frontend
 
-* Funktionalität (10 Punkte)
-* Code-Verständlichkeit (10 Punkte)
-* Tests (10 Punkte)
-* Klassen/Selektoren (5 Punkte)
-* Mobile/Accessibility (5 Punkte)
+* Funktionalität (10 Punkte): ja
+* Code-Verständlichkeit (10 Punkte): na ja...
+* Tests (10 Punkte): ja (Akzeptanztest ungenügend)
+* Klassen/Selektoren (5 Punkte): hoffentlich ja
+* Mobile/Accessibility (5 Punkte): ja
 
 ### Backend
 
-* Funktionalität (10 Punkte)
-* Tests (10 Punkte)
-* SQL Injection Schutz (10 Punkte)
-* Swagger Dokumentation (5 Punkte)
-* RESTfulness (5 Punkte)
+* Funktionalität (10 Punkte): ja
+* Tests (10 Punkte): ja
+* SQL Injection Schutz (10 Punkte): ja
+* Swagger Dokumentation (5 Punkte): ja
+* RESTfulness (5 Punkte): ja
 
-Formel: `(erreichte Punkte / total mögliche Punkte) * 5 + 1`
 
 ---
 
