@@ -1,7 +1,7 @@
-<form [formGroup]="form" (ngSubmit)="onSubmit()" class="form-grid">
+<form [formGroup]="form" (ngSubmit)="onSubmit()" class="form-grid" data-testid="search-form">
   <mat-form-field appearance="outline">
     <mat-label>Routenart</mat-label>
-    <mat-select formControlName="profile">
+    <mat-select formControlName="profile" data-testid="profile-select">
       @for (profile of profiles; track profile.label) {
         <mat-option [value]="profile.value">
           <mat-icon>{{ profile.icon }}</mat-icon>
@@ -11,12 +11,15 @@
     </mat-select>
   </mat-form-field>
 
+  <!-- Start -->
   <mat-form-field appearance="outline">
     <mat-label>Start</mat-label>
     <input matInput
+           id="startControl"
            type="text"
            [matAutocomplete]="autoStart"
-           [formControl]="form.controls.start">
+           [formControl]="form.controls.start"
+           data-testid="start-input">
     <mat-autocomplete #autoStart="matAutocomplete"
                       [displayWith]="displaySuggestion"
                       (optionSelected)="handleStartSelected($event)">
@@ -28,9 +31,12 @@
     </mat-autocomplete>
   </mat-form-field>
 
+  <!-- Ziel -->
   <mat-form-field appearance="outline">
     <mat-label>Ziel</mat-label>
     <input matInput
+           data-testid="destination-input"
+           id="endControl"
            type="text"
            [matAutocomplete]="autoDest"
            [formControl]="form.controls.destination">
@@ -45,11 +51,19 @@
     </mat-autocomplete>
   </mat-form-field>
 
+  <!-- Buttons -->
   <button mat-flat-button
           color="primary"
           type="submit"
+          data-testid="route-button"
           [disabled]="!form.controls.start.value || !form.controls.destination.value || form.invalid">
     Route berechnen
   </button>
-  <button mat-button type="button" (click)="onClear()">Eingabe leeren</button>
+
+  <button mat-button
+          type="button"
+          data-testid="clear-button"
+          (click)="onClear()">
+    Eingabe leeren
+  </button>
 </form>

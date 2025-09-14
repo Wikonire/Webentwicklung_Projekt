@@ -1,21 +1,31 @@
 <div class="header-row">
-  <app-search-form (findRoute)="findRoute($event)" [selectedRoute]="routeStore.routeResult()"></app-search-form>
+  <app-search-form
+    (findRoute)="findRoute($event)"
+    [selectedRoute]="routeStore.routeResult()">
+  </app-search-form>
+
   <div class="tab-group">
     <mat-tab-group>
       <mat-tab label="Top 10 der letzten Routen">
-        <app-top-routes [topRoutes]="routeStore.topSearches()" >
+        <app-top-routes
+          [topRoutes]="routeStore.topSearches()">
         </app-top-routes>
       </mat-tab>
+
       <mat-tab label="Gespeicherte Routen">
         <app-saved-routes
-        (showRoute)="onShowSavedRoute($event)"
-        [savedRoutes]="routeStore.savedRoutes()"></app-saved-routes></mat-tab>
+          data-testid="saved-routes"
+          (showRoute)="onShowSavedRoute($event)"
+          [savedRoutes]="routeStore.savedRoutes()">
+        </app-saved-routes>
+      </mat-tab>
     </mat-tab-group>
   </div>
 </div>
 
 <div class="content">
   <app-map
+    data-testid="map"
     [geoJsonRouteData]="routeStore.routeGeoJson()"
     [route]="routeStore.routeResult()">
   </app-map>

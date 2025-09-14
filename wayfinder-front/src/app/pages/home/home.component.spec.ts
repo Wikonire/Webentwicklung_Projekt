@@ -3,7 +3,7 @@ import { HomeComponent } from './home.component';
 import { RouteStore } from '../../services/route-store.service';
 import { OrsProfile } from '../../models/ors-profile.model';
 import { Suggestion } from '../../services/ors.service';
-import {MatTabGroup, MatTabsModule} from '@angular/material/tabs';
+import {MatTabsModule} from '@angular/material/tabs';
 
 import { SearchFormComponent } from '../../components/search-form/search-form.component';
 import { MapComponent } from '../../components/map/map.component';
@@ -19,7 +19,7 @@ import {CommonModule} from '@angular/common';
 import {MatListHarness} from '@angular/material/list/testing';
 import {TopRoutesHarness} from '../../components/top-routes/top-routes.component.harness';
 import {SavedRoutesHarness} from '../../components/saved-routes/saved-routes.component.harness';
-import {HarnessLoader} from '@angular/cdk/harness-environment.d';
+import {HarnessLoader} from '@angular/cdk/testing';
 
 describe('HomeComponent', () => {
   describe('Unit-Tests', () => {

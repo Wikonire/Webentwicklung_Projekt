@@ -1,36 +1,39 @@
 <h2>Gespeicherte Routen</h2>
 
-<mat-list data-testid="saved-routes-list">
+<mat-list>
   @for (route of savedRoutes; track route.id) {
     <mat-list-item>
       <span matListItemTitle>
         {{ displayRouteHelper.displayRoute(route) }}
         <mat-icon
           [matTooltip]="'Routenart: ' + getProfileLabel(route.profile)"
-          class="route-icon">
+          class="route-icon"
+          data-testid="saved-route-icon">
           {{ getProfileIcon(route.profile) }}
         </mat-icon>
       </span>
 
+      <!-- Löschen -->
       <button
         mat-icon-button
         matListItemMeta
         (click)="remove(route.id)"
-        [matTooltip]="displayRouteHelper.displayRoute(route) + ' löschen'"
-        data-testid="delete-saved-route">
+        [matTooltip]="displayRouteHelper.displayRoute(route) + ' löschen'">
         <mat-icon>delete</mat-icon>
       </button>
 
+      <!-- Auf Karte anzeigen -->
       <button
         mat-icon-button
         matListItemMeta
         [matTooltip]="'Route \'' + displayRouteHelper.displayRoute(route) + '\' auf Karte anzeigen'"
-        (click)="toMap(route.id, route.profile)"
-        data-testid="saved-route-to-map">
+        (click)="toMap(route.id, route.profile)">
         <mat-icon>map</mat-icon>
       </button>
     </mat-list-item>
   } @empty {
-    <mat-list-item>Keine gespeicherten Routen.</mat-list-item>
+    <mat-list-item>
+      Keine gespeicherten Routen.
+    </mat-list-item>
   }
 </mat-list>
