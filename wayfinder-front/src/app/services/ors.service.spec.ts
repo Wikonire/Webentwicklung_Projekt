@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { OrsService, Suggestion } from './ors.service';
 import { OrsProfile } from '../models/ors-profile.model';
-import {provideHttpClient, withInterceptorsFromDi} from '@angular/common/http';
+import {HttpErrorResponse, provideHttpClient, withInterceptorsFromDi} from '@angular/common/http';
 import {LngLat} from '../models/routes.model';
 
 describe('OrsService', () => {
@@ -28,15 +28,9 @@ describe('OrsService', () => {
       const expectedUrl = `http://localhost:3000/ors/autocomplete`;
 
       const backendPayload = {
-        features: [
-          {
-            properties: { label: 'Zürich, Schweiz' },
-            geometry: { coordinates: [8.5417, 47.3769] },
-          },
-          {
-            properties: { name: 'Zürich HB' },
-            geometry: { coordinates: [8.5402, 47.3782] },
-          },
+        suggestions: [
+          { label: 'Zürich, Schweiz', coord: [8.5417, 47.3769] },
+          { label: 'Zürich HB', coord: [8.5402, 47.3782] },
         ],
       };
 
@@ -184,7 +178,7 @@ describe('OrsService', () => {
   });
 
   describe('directionsAsRouteResult()', () => {
-    it('should map FeatureCollection to RouteResult with meters and seconds', (done) => {
+    it('should map FeatureCollection to AppRoute with distance and duration', (done) => {
       const startCoordinates: LngLat = [8.1, 47.1];
       const destinationCoordinates: LngLat = [8.2, 47.2];
 
@@ -199,14 +193,21 @@ describe('OrsService', () => {
         ],
       };
 
+      jest.spyOn(global.crypto, 'randomUUID').mockReturnValue(`x-x-x-x-x`);
+
       orsService
-        .directionsAsRouteResult(startCoordinates, destinationCoordinates, 'driving-car')
+        .directionsAsRouteResult(startCoordinates, destinationCoordinates, 'driving-car', 'Start', 'Ziel')
         .subscribe((routeResult) => {
           expect(routeResult).toEqual({
-            name: '8.1, 47.1 → 8.2, 47.2',
+            id: 'mocked-uuid',
+            startLabel: 'Start',
+            destinationLabel: 'Ziel',
+            profile: 'driving-car',
+            startCoord: startCoordinates,
+            destinationCoord: destinationCoordinates,
             geometry: featureCollectionPayload,
-            distanceMeters: 1234,
-            durationSeconds: 56,
+            distance: 1234,
+            duration: 56,
           });
           done();
         });
@@ -215,16 +216,119 @@ describe('OrsService', () => {
       req.flush(featureCollectionPayload);
     });
 
-    it('should return null RouteResult when FeatureCollection is null', (done) => {
+
+
+    it('should propagate error when HTTP request fails', (done) => {
       orsService
-        .directionsAsRouteResult([0, 0], [0, 0])
-        .subscribe((routeResult) => {
-          expect(routeResult).toBeNull();
-          done();
+        .directionsAsRouteResult([0, 0], [0, 0], 'driving-car', 'Start', 'Ziel')
+        .subscribe({
+          next: () => fail('expected an error, not a result'),
+          error: (err) => {
+            expect(err).toBeInstanceOf(HttpErrorResponse);
+            done();
+          },
         });
 
       const req = httpMock.expectOne(() => true);
       req.error(new ErrorEvent('NetworkError'));
+    });
+     });
+  describe('OrsService extra cases', () => {
+    describe('autocomplete()', () => {
+      it('should return [] immediately if query is empty string', (done) => {
+        orsService.autocomplete('   ').subscribe((result) => {
+          expect(result).toEqual([]);
+          done();
+        });
+        httpMock.expectNone(() => true);
+      });
+
+      it('should return [] if backend returns no suggestions array', (done) => {
+        orsService.autocomplete('x').subscribe((result) => {
+          expect(result).toEqual([]);
+          done();
+        });
+        const req = httpMock.expectOne(() => true);
+        req.flush({}); // no suggestions
+      });
+    });
+
+    describe('geocode()', () => {
+      it('should return [] immediately if query is empty', (done) => {
+        orsService.geocode('  ').subscribe((result) => {
+          expect(result).toEqual([]);
+          done();
+        });
+        httpMock.expectNone(() => true);
+      });
+
+      it('should map feature without label to "Unbekannt"', (done) => {
+        const payload = { features: [{ id: '1', geometry: { coordinates: [1, 2] } }] };
+        orsService.geocode('foo').subscribe((result) => {
+          expect(result[0].label).toBe('Unbekannt');
+          done();
+        });
+        const req = httpMock.expectOne(() => true);
+        req.flush(payload);
+      });
+
+      it('should map feature without coordinates to NaN values', (done) => {
+        const payload = { features: [{ id: '2', properties: { label: 'X' }, geometry: {} }] };
+        orsService.geocode('foo').subscribe((result) => {
+          expect(result[0].coord).toEqual([NaN, NaN]);
+          done();
+        });
+        const req = httpMock.expectOne(() => true);
+        req.flush(payload);
+      });
+    });
+
+    describe('directionsFeatureCollection()', () => {
+      it('should return null if response has no routes and no type', (done) => {
+        orsService.directionsFeatureCollection([0,0],[1,1]).subscribe((res) => {
+          expect(res).toBeNull();
+          done();
+        });
+        const req = httpMock.expectOne(() => true);
+        req.flush({});
+      });
+
+      it('should return null if route has no geometry', (done) => {
+        orsService.directionsFeatureCollection([0,0],[1,1]).subscribe((res) => {
+          expect(res).toBeNull();
+          done();
+        });
+        const req = httpMock.expectOne(() => true);
+        req.flush({ routes: [{}] });
+      });
+    });
+
+    describe('directionsAsRouteResult()', () => {
+      it('should return distance=0 and duration=0 if summary missing', (done) => {
+        const payload = {
+          type: 'FeatureCollection',
+          features: [{ type: 'Feature', geometry: { type: 'LineString', coordinates: [] } }]
+        };
+        orsService.directionsAsRouteResult([0,0],[1,1],'driving-car','s','d').subscribe((res) => {
+          expect(res.distance).toBe(0);
+          expect(res.duration).toBe(0);
+          done();
+        });
+        const req = httpMock.expectOne(() => true);
+        req.flush(payload);
+      });
+
+      it('should fallback to empty geometry and 0 values if response not FeatureCollection', (done) => {
+        const payload = { foo: 'bar' };
+        orsService.directionsAsRouteResult([0,0],[1,1],'cycling-mountain','a','b').subscribe((res) => {
+          expect(res?.geometry?.features.length).toBe(0);
+          expect(res.distance).toBe(0);
+          expect(res.duration).toBe(0);
+          done();
+        });
+        const req = httpMock.expectOne(() => true);
+        req.flush(payload);
+      });
     });
   });
 });

@@ -57,8 +57,7 @@ export class OrsService {
       .get<AutocompleteResponse>(`${this.apiBaseUrl}/ors/autocomplete`, { params: httpParams })
       .pipe(
         map(({ suggestions }) => (Array.isArray(suggestions) ? suggestions : [])),
-        catchError(error => {
-          console.error('Autocomplete error:', error);
+        catchError(() => {
           return of([]);
         })
       );
