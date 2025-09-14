@@ -82,225 +82,152 @@ const FeatureCollectionLineString = {
 };
 
 export const OPENAPI = {
-    openapi: '3.0.3',
-    info: { title: 'Wayfinder API', version: '1.1.0' },
-    servers: [{ url: SERVER_URL }],
-    components: {
-        schemas: {
-            Error: ErrorSchema,
-            OrsProfile,
-            Suggestion,
-            FeatureCollectionLineString,
-            CreateRouteDto: {
-                type: 'object',
-                required: ['userId','startLat','startLng','endLat','endLng','geometry'],
-                properties: {
-                    userId:   { type: 'string' },
-                    name:     { type: 'string', nullable: true },
-                    startLat: { type: 'number' },
-                    startLng: { type: 'number' },
-                    endLat:   { type: 'number' },
-                    endLng:   { type: 'number' },
-                    distance: { type: 'integer', nullable: true },
-                    duration: { type: 'integer', nullable: true },
-                    geometry: { type: 'object', description: 'GeoJSON Geometry' }
-                },
-                example: {
-                    userId: 'u1',
-                    startLat: 47.56, startLng: 7.59,
-                    endLat: 47.05,   endLng: 8.31,
-                    geometry: { type: 'LineString', coordinates: [[7.59,47.56],[8.31,47.05]] }
-                }
-            },
-            Route: {
-                allOf: [
-                    { $ref: '#/components/schemas/CreateRouteDto' },
-                    {
-                        type: 'object',
-                        required: ['id','createdAt'],
-                        properties: {
-                            id: { type: 'string' },
-                            createdAt: { type: 'string' }
-                        }
-                    }
-                ]
-            }
-        }
+    openapi: "3.0.3",
+    info: {
+        title: "Wayfinder API",
+        version: "1.0.0",
+        description: "API zum Suchen, Autovervollständigen und Speichern von Routen."
     },
+    servers: [
+        { url: "http://localhost:3000", description: "Lokale Entwicklung" }
+    ],
     paths: {
-        /* ---------- ORS Proxy ---------- */
-        '/ors/autocomplete': {
+        "/ors/autocomplete": {
             get: {
-                summary: 'Autocomplete (Proxy zu ORS Pelias, normalisiert)',
+                summary: "Adressen autovervollständigen",
                 parameters: [
-                    {
-                        name: 'query',
-                        in: 'query',
-                        required: true,
-                        schema: { type: 'string', minLength: 1 },
-                        description: 'Suchtext'
-                    },
-                    {
-                        name: 'size',
-                        in: 'query',
-                        schema: { type: 'integer', minimum: 1, maximum: 20, default: 10 }
-                    },
-                    {
-                        name: 'lang',
-                        in: 'query',
-                        schema: { type: 'string', minLength: 2, maxLength: 5, default: 'de' },
-                        description: 'z. B. de, en'
-                    },
-                    {
-                        name: 'country',
-                        in: 'query',
-                        schema: {
-                            type: 'string',
-                            minLength: 3,
-                            maxLength: 3,
-                            pattern: '^[A-Z]{3}$',
-                            example: 'CHE'
-                        },
-                        description: 'ISO-3 (z. B. CHE)'
-                    },
-                    {
-                        name: 'lat',
-                        in: 'query',
-                        schema: { type: 'number', minimum: -90, maximum: 90 },
-                        description: 'focus.point.lat'
-                    },
-                    {
-                        name: 'lon',
-                        in: 'query',
-                        schema: { type: 'number', minimum: -180, maximum: 180 },
-                        description: 'focus.point.lon'
-                    },
-                    {
-                        name: 'layers',
-                        in: 'query',
-                        schema: {
-                            type: 'string',
-                            example: 'address,street,locality',
-                            description: 'Kommagetrennt'
-                        },
-                        description: 'z. B. locality,region,address'
-                    }
+                    { name: "query", in: "query", required: true, schema: { type: "string" }, description: "Suchtext" },
+                    { name: "size", in: "query", schema: { type: "integer", minimum: 1, maximum: 30 } },
+                    { name: "layers", in: "query", schema: { type: "string" } },
+                    { name: "lang", in: "query", schema: { type: "string" } },
+                    { name: "country", in: "query", schema: { type: "string" } }
                 ],
                 responses: {
-                    '200': {
-                        description: 'OK',
+                    200: {
+                        description: "Liste mit Vorschlägen",
                         content: {
-                            'application/json': {
+                            "application/json": {
                                 schema: {
-                                    type: 'object',
-                                    required: ['features'],
+                                    type: "object",
                                     properties: {
-                                        features: {
-                                            type: 'array',
-                                            items: { $ref: '#/components/schemas/Suggestion' }
-                                        }
-                                    }
-                                },
-                                examples: {
-                                    default: {
-                                        value: {
-                                            features: [
-                                                { label: 'Zürich, CHE', coord: [8.5417, 47.3769], layer: 'locality' },
-                                                { label: 'Bern, CHE',   coord: [7.4474, 46.9481], layer: 'locality' }
-                                            ]
+                                        suggestions: {
+                                            type: "array",
+                                            items: {
+                                                type: "object",
+                                                properties: {
+                                                    id: { type: "string" },
+                                                    label: { type: "string" },
+                                                    coord: { type: "array", items: { type: "number" }, minItems: 2, maxItems: 2 }
+                                                }
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
                     },
-                    '400': { description: 'Bad Request', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
-                    '401': { description: 'Unauthorized (Upstream)', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
-                    '429': { description: 'Rate limit',  content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } }
+                    400: { description: "Fehlende Parameter" }
                 }
             }
         },
-        '/ors/directions': {
+        "/ors/geocode": {
+            get: {
+                summary: "Geocoding (Adresse → Koordinaten)",
+                parameters: [
+                    { name: "query", in: "query", required: true, schema: { type: "string" } }
+                ],
+                responses: {
+                    200: { description: "Liste mit Ergebnissen (wie Autocomplete)" },
+                    400: { description: "Fehlende Parameter" }
+                }
+            }
+        },
+        "/ors/directions": {
             post: {
-                summary: 'Directions (Proxy zu ORS)',
+                summary: "Route berechnen",
                 requestBody: {
                     required: true,
                     content: {
-                        'application/json': {
+                        "application/json": {
                             schema: {
-                                type: 'object',
-                                required: ['start','end'],
+                                type: "object",
                                 properties: {
-                                    start: { type: 'array', items: { type: 'number' }, minItems: 2, maxItems: 2, description: '[lon,lat]' },
-                                    end:   { type: 'array', items: { type: 'number' }, minItems: 2, maxItems: 2, description: '[lon,lat]' },
-                                    profile: {
-                                        $ref: '#/components/schemas/OrsProfile',
-                                        default: 'driving-car',
-                                        description: 'Routenart (Auto oder zu Fuß)'
-                                    }
-                                }
-                            },
-                            example: { start: [7.59,47.56], end: [8.31,47.05], profile: 'driving-car' }
+                                    start: { type: "array", items: { type: "number" }, minItems: 2, maxItems: 2 },
+                                    end: { type: "array", items: { type: "number" }, minItems: 2, maxItems: 2 },
+                                    profile: { type: "string", enum: ["driving-car", "cycling-mountain", "foot-walking"] }
+                                },
+                                required: ["start", "end", "profile"]
+                            }
                         }
                     }
                 },
                 responses: {
-                    '200': {
-                        description: 'GeoJSON FeatureCollection (LineString)',
-                        content: { 'application/json': { schema: { $ref: '#/components/schemas/FeatureCollectionLineString' } } }
-                    },
-                    '400': { description: 'Bad Request', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
-                    '401': { description: 'Unauthorized (Upstream)', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
-                    '429': { description: 'Rate limit',  content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } }
+                    200: { description: "GeoJSON FeatureCollection mit Route" },
+                    400: { description: "Ungültiger Body" }
                 }
             }
         },
-
-        /* ---------- Routes CRUD ---------- */
-        '/routes': {
-            get: {
-                summary: 'Alle Routen eines Nutzers',
-                parameters: [{ name: 'userId', in: 'query', required: true, schema: { type: 'string' } }],
-                responses: {
-                    '200': { description: 'OK', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/Route' } } } } },
-                    '400': { description: 'Bad Request', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } }
-                }
-            },
+        "/routes": {
             post: {
-                summary: 'Neue Route speichern',
+                summary: "Neue Route speichern",
                 requestBody: {
                     required: true,
-                    content: { 'application/json': { schema: { $ref: '#/components/schemas/CreateRouteDto' } } }
+                    content: {
+                        "application/json": {
+                            schema: {
+                                type: "object",
+                                properties: {
+                                    startCoord: { type: "array", items: { type: "number" }, minItems: 2, maxItems: 2 },
+                                    destinationCoord: { type: "array", items: { type: "number" }, minItems: 2, maxItems: 2 },
+                                    startLabel: { type: "string" },
+                                    destinationLabel: { type: "string" },
+                                    profile: { type: "string" }
+                                },
+                                required: ["startCoord", "destinationCoord", "startLabel", "destinationLabel", "profile"]
+                            }
+                        }
+                    }
                 },
                 responses: {
-                    '201': {
-                        description: 'Created',
-                        headers: { Location: { schema: { type: 'string' }, description: 'URI der neuen Ressource' } },
-                        content: { 'application/json': { schema: { $ref: '#/components/schemas/Route' } } }
-                    },
-                    '400': { description: 'Bad Request', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } }
+                    201: { description: "Route gespeichert und zurückgegeben" },
+                    400: { description: "Validierungsfehler" },
+                    500: { description: "Interner Fehler" }
+                }
+            },
+            get: {
+                summary: "Alle gespeicherten Routen eines Users abrufen",
+                responses: {
+                    200: {
+                        description: "Liste mit gespeicherten Routen",
+                        content: {
+                            "application/json": {
+                                schema: { type: "array", items: { type: "object" } }
+                            }
+                        }
+                    }
                 }
             }
         },
-        '/routes/{id}': {
+        "/routes/{id}": {
             get: {
-                summary: 'Route lesen',
+                summary: "Eine gespeicherte Route abrufen",
                 parameters: [
-                    { name: 'id', in: 'path', required: true, schema: { type: 'string' } },
-                    { name: 'userId', in: 'query', required: true, schema: { type: 'string' } }
+                    { name: "id", in: "path", required: true, schema: { type: "string" } }
                 ],
                 responses: {
-                    '200': { description: 'OK', content: { 'application/json': { schema: { $ref: '#/components/schemas/Route' } } } },
-                    '404': { description: 'Not Found' }
+                    200: { description: "Route gefunden" },
+                    404: { description: "Nicht gefunden" }
                 }
             },
             delete: {
-                summary: 'Route löschen',
+                summary: "Eine gespeicherte Route löschen",
                 parameters: [
-                    { name: 'id', in: 'path', required: true, schema: { type: 'string' } },
-                    { name: 'userId', in: 'query', required: true, schema: { type: 'string' } }
+                    { name: "id", in: "path", required: true, schema: { type: "string" } }
                 ],
-                responses: { '204': { description: 'Deleted' }, '404': { description: 'Not Found' } }
+                responses: {
+                    204: { description: "Route gelöscht" },
+                    404: { description: "Nicht gefunden" }
+                }
             }
         }
     }
